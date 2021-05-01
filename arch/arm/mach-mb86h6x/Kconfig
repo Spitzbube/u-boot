@@ -1,0 +1,41 @@
+config MB86H60
+	bool "Fujitsu MB86H60 SoC support"
+	depends on ARCH_MB86H6X
+	select CPU_ARM1176
+
+menu "Fujitsu MB86H6X family"
+	depends on ARCH_MB86H6X
+
+choice
+	prompt "Fujitsu MB86H6X board select"
+	optional
+
+config TARGET_H60_STB
+	bool "Fujitsu STB (all MB86H60 variants)"
+	help
+	  Support for all ARM1176-/MB86H60-based boards variants
+	select MB86H60 
+
+config TARGET_H61_STB
+	bool "Fujitsu STB (all MB86H61 variants)"
+	help
+	  Support for all ARM1176-/MB86H61-based boards variants
+	select MB86H61
+
+endchoice
+
+config SYS_BOARD
+	default "mb86h60_stb"
+
+config SYS_VENDOR
+	default "fujitsu"
+
+config SYS_SOC
+	default "mb86h6x"
+
+config SYS_CONFIG_NAME
+	default "mb86h60_stb"
+
+source "board/fujitsu/mb86h60_stb/Kconfig"
+
+endmenu

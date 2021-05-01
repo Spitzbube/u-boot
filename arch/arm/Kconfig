@@ -616,6 +616,10 @@ config TARGET_FLEA3
 	bool "Support flea3"
 	select CPU_ARM1136
 
+config ARCH_MB86H6X
+	bool "Fujitsu MB86H6X family"
+	select DM
+
 config ARCH_BCM283X
 	bool "Broadcom BCM283X family"
 	select DM
@@ -1832,6 +1836,8 @@ source "arch/arm/mach-keystone/Kconfig"
 source "arch/arm/mach-kirkwood/Kconfig"
 
 source "arch/arm/mach-lpc32xx/Kconfig"
+
+source "arch/arm/mach-mb86h6x/Kconfig"
 
 source "arch/arm/mach-mvebu/Kconfig"
 
