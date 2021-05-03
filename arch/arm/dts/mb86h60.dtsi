@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) Thomas Schmidt <spitzbube@mail.bg>
+ */
+
+/dts-v1/;
+
+/ {
+	compatible = "fujitsu,mb86h60";
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	uart0: serial@c2000000 {
+		compatible = "arm,pl011";
+		reg = <0x0 0xc2000000 0x0 0x1000>;
+		clock = <81000000>;
+	}; 
+
+	uart1: serial@ce000000 {
+		compatible = "arm,pl011";
+		reg = <0x0 0xce000000 0x0 0x1000>;
+		clock = <81000000>;
+	}; 
+
+};
+

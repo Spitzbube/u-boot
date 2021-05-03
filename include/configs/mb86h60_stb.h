@@ -28,12 +28,6 @@
 /* Environment */
 #define CONFIG_SYS_LOAD_ADDR		0x21B00000
 
-
-/* Console UART */
-#define CONFIG_PL011_SERIAL
-#define CONFIG_PL011_CLOCK		81000000
-#define CONFIG_PL01x_PORTS		{ (void *)0xc2000000 }
-
 /* Console configuration */
 #define CONFIG_SYS_CBSIZE		1024
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE +		\

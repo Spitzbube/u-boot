@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) 2021 Thomas Schmidt <spitzbube@mail.bg>
+ */
+
+/dts-v1/;
+
+#include "mb86h60.dtsi"
+
+/ {
+	compatible = "fujitsu,mb86h60";
+	model = "Fujitsu MB86H60 STB";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:57600n8";
+	};
+ 
+};
+
+&uart0 {
+	status = "okay";
+};
+

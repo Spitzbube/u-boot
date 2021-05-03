@@ -997,6 +997,9 @@ dtb-$(CONFIG_TARGET_SAMA5D4_XPLAINED) += \
 dtb-$(CONFIG_TARGET_VINCO) += \
 	at91-vinco.dtb
 
+dtb-$(CONFIG_ARCH_MB86H6X) += \
+	mb86h60_stb.dtb
+
 dtb-$(CONFIG_ARCH_BCM283X) += \
 	bcm2835-rpi-a.dtb \
 	bcm2835-rpi-a-plus.dtb \

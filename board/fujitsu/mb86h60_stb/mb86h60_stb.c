@@ -519,8 +519,11 @@ void *board_fdt_blob_setup(void)
 	return (void *)fw_dtb_pointer;
 }
 
+#endif
+
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
+#if 0
 	/*
 	 * For now, we simply always add the simplefb DT node. Later, we
 	 * should be more intelligent, and e.g. only do this if no enabled DT
@@ -534,7 +537,8 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 			   EFI_RESERVED_MEMORY_TYPE);
 #endif
 
+#endif
+
 	return 0;
 }
 
-#endif
