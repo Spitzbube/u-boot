@@ -273,48 +273,18 @@ static const struct rpi_model *model;
 
 int dram_init(void)
 {
-#if 0
-	ALLOC_CACHE_ALIGN_BUFFER(struct msg_get_arm_mem, msg, 1);
-	int ret;
+	if (fdtdec_setup_mem_size_base() != 0)
+		return -EINVAL;
 
-	BCM2835_MBOX_INIT_HDR(msg);
-	BCM2835_MBOX_INIT_TAG(&msg->get_arm_mem, GET_ARM_MEMORY);
-
-	ret = bcm2835_mbox_call_prop(BCM2835_MBOX_PROP_CHAN, &msg->hdr);
-	if (ret) {
-		printf("bcm2835: Could not query ARM memory size\n");
-		return -1;
-	}
-
-	gd->ram_size = msg->get_arm_mem.body.resp.mem_size;
-
-	/*
-	 * In some configurations the memory size returned by VideoCore
-	 * is not aligned to the section size, what is mandatory for
-	 * the u-boot's memory setup.
-	 */
-	gd->ram_size &= ~MMU_SECTION_SIZE;
-#else
-	gd->ram_size = 64*1024*1024;
-#endif
-
-	return 0;
+	return 0; 
 }
 
-#if 0
-
-#ifdef CONFIG_OF_BOARD
 int dram_init_banksize(void)
 {
-	int ret;
-
-	ret = fdtdec_setup_memory_banksize();
-	if (ret)
-		return ret;
-
-	return fdtdec_setup_mem_size_base();
+	return fdtdec_setup_memory_banksize();
 }
-#endif
+
+#if 0
 
 static void set_fdtfile(void)
 {
