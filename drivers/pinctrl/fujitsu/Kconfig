@@ -1,0 +1,8 @@
+config PINCTRL_MB86H6X
+	depends on ARCH_MB86H6X && PINCTRL_FULL && OF_CONTROL
+	default y
+	bool "Fujitsu MB86H6x family pin control driver"
+	help
+	   Support pin multiplexing and pin configuration control on
+	   Fujitsu's MB86H6x family of SoCs.
+

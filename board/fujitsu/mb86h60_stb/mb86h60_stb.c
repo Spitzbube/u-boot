@@ -512,3 +512,25 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	return 0;
 }
 
+void gpio_direction_input()
+{
+}
+
+void gpio_get_value()
+{
+}
+
+void gpio_request()
+{
+}
+
+void gpio_free()
+{
+}
+
+void gpio_direction_output()
+{
+}
+
+
+

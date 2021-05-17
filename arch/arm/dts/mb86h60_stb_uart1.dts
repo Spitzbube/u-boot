@@ -23,10 +23,29 @@
 
 	aliases {
 		serial0 = &uart0;
+		serial1 = &uart1;
 	};
 
 	chosen {
-		stdout-path = "serial0:115200n8";
+		stdout-path = "serial1:115200n8";
 	};
  
 };
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+
+&pinctrl_uart0 {
+	fujitsu,pins = <35 34>;
+};
+
+&pinctrl_uart1 {
+	fujitsu,pins = <32 33>;
+};
+

@@ -17,12 +17,8 @@
 #endif
 
 /* Memory layout */
-#define CONFIG_SYS_SDRAM_BASE		0x20000000
 #define CONFIG_SYS_UBOOT_BASE		CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_SDRAM_SIZE		SZ_64M
-#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + \
-					 CONFIG_SYS_SDRAM_SIZE - \
-					 GENERATED_GBL_DATA_SIZE)
+#define CONFIG_SYS_INIT_SP_ADDR		(0x24000000 - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_MALLOC_LEN		SZ_4M
 
 /* Environment */
@@ -46,10 +42,6 @@
 		"env import -t ${loadaddr} ${filesize}; " \
 	"fi"
 
-#define ENV_DEVICE_SETTINGS \
-	"stdin=serial,lcd\0" \
-	"stdout=serial,lcd\0" \
-	"stderr=serial,lcd\0"
-
+//#define DEBUG
 
 #endif

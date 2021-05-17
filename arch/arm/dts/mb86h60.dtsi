@@ -3,25 +3,48 @@
  * Copyright (C) 2021 Thomas Schmidt <spitzbube@mail.bg>
  */
 
-/dts-v1/;
+#include <dt-bindings/pinctrl/mb86h60.h>
 
 / {
 	compatible = "fujitsu,mb86h60";
-
 	#address-cells = <1>;
 	#size-cells = <1>;
 
-	uart0: serial@c2000000 {
-		compatible = "arm,pl011";
-		reg = <0xc2000000 0x1000>;
-		clock = <81000000>;
-	}; 
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
 
-	uart1: serial@ce000000 {
-		compatible = "arm,pl011";
-		reg = <0xce000000 0x1000>;
-		clock = <81000000>;
-	}; 
+		gpio: gpio@c3000000 {
+			compatible = "fujitsu,mb86h60-gpio";
+			reg = <0xc3000000 0x1000>;
+			pinctrl_uart0: gpio_uart0 {
+				fujitsu,function = <MB86H60_GPIO_IN_UART0_DATA MB86H60_GPIO_OUT_UART0_DATA>;
+				fujitsu,pins = <32 33>;
+			};
+			pinctrl_uart1: gpio_uart1 {
+				fujitsu,function = <MB86H60_GPIO_IN_UART1_DATA MB86H60_GPIO_OUT_UART1_DATA>;
+				fujitsu,pins = <35 34>;
+			};
+		};
+
+		uart0: serial@c2000000 {
+			compatible = "arm,pl011";
+			reg = <0xc2000000 0x1000>;
+			clock = <81000000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_uart0>;
+		}; 
+
+		uart1: serial@ce000000 {
+			compatible = "arm,pl011";
+			reg = <0xce000000 0x1000>;
+			clock = <81000000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_uart1>;
+		}; 
+
+	};
 
 };
 
