@@ -368,7 +368,7 @@ int spi_get_bus_and_cs(int busnum, int cs, int speed, int mode,
 	 * SPI flash chip - we will bind to the correct driver.
 	 */
 	if (ret == -ENODEV && drv_name) {
-		dev_dbg(bus, "%s: Binding new device '%s', busnum=%d, cs=%d, driver=%s\n",
+		/*dev_dbg(bus,*/printf( "%s: Binding new device '%s', busnum=%d, cs=%d, driver=%s\n",
 			__func__, dev_name, busnum, cs, drv_name);
 		ret = device_bind_driver(bus, drv_name, dev_name, &dev);
 		if (ret) {
@@ -460,6 +460,7 @@ int spi_slave_of_to_plat(struct udevice *dev, struct dm_spi_slave_plat *plat)
 	int value;
 
 	plat->cs = dev_read_u32_default(dev, "reg", -1);
+	
 	plat->max_hz = dev_read_u32_default(dev, "spi-max-frequency",
 					    SPI_DEFAULT_SPEED_HZ);
 	if (dev_read_bool(dev, "spi-cpol"))

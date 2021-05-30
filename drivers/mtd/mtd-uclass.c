@@ -18,8 +18,12 @@
  */
 int mtd_probe(struct udevice *dev)
 {
+	printf("mtd_probe\n");
+
 	if (device_active(dev))
 		return 0;
+
+	printf("before device_probe\n");
 
 	return device_probe(dev);
 }

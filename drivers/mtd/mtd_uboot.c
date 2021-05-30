@@ -108,6 +108,8 @@ static void mtd_probe_uclass_mtd_devs(void)
 	struct udevice *dev;
 	int idx = 0;
 
+	printf("mtd_probe_uclass_mtd_devs\n");
+
 	/* Probe devices with DM compliant drivers */
 	while (!uclass_find_device(UCLASS_MTD, idx, &dev) && dev) {
 		mtd_probe(dev);

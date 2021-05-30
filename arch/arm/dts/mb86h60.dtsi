@@ -26,6 +26,22 @@
 				fujitsu,function = <MB86H60_GPIO_IN_UART1_DATA MB86H60_GPIO_OUT_UART1_DATA>;
 				fujitsu,pins = <35 34>;
 			};
+			pinctrl_spiflash: gpio_spiflash {
+				fujitsu,function = <MB86H60_GPIO_IN_SFLASH_DATA 
+									MB86H60_GPIO_OUT_SFLASH_HOLD
+									MB86H60_GPIO_OUT_SFLASH_CS
+									MB86H60_GPIO_OUT_SFLASH_CLK
+									MB86H60_GPIO_OUT_SFLASH_DATA>;
+				fujitsu,pins = <43 44 45 46 47>;
+			};
+			pinctrl_ssp0: gpio_ssp0 {
+				fujitsu,function = <MB86H60_GPIO_IN_SSP0_DATA
+									MB86H60_GPIO_OUT_SSP0_OE
+									MB86H60_GPIO_OUT_SSP0_FFS 
+									MB86H60_GPIO_OUT_SSP0_CLK									
+									MB86H60_GPIO_OUT_SSP0_DATA>;
+				fujitsu,pins = <43 44 45 46 47>;
+			};
 		};
 
 		uart0: serial@c2000000 {
@@ -44,6 +60,58 @@
 			pinctrl-0 = <&pinctrl_uart1>;
 		}; 
 
+		spiflash: spiflash@c0000000 {
+			compatible = "fujitsu,mb86h60-spiflash";
+			reg = <0xc0000000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_spiflash>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			flash0: flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+/*
+				partition@00000000 {
+					label = "U-Boot";
+					reg = <0x0 0xC0000>;
+				};
+
+				partition@000C0000 {
+					label = "env";
+					reg = <0xC0000 0x2000>;
+				};
+				
+				partition@000C2000 {
+					label = "splash";
+					reg = <0xC2000 0x13e000>;
+				}; 
+*/
+			};
+		};
+
+		ssp0: ssp@d1000000 {
+			compatible = "arm,pl022-spi";
+			reg = <0xd1000000 0x1000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_ssp0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			flash1: flash@0 {
+				compatible = "jedec,spi-nor";
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+			};
+		};
+
+		ssp1: ssp@d4000000 {
+			compatible = "arm,pl022-spi";
+			reg = <0xd4000000 0x1000>;
+		};
+		
 	};
 
 };

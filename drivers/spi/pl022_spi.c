@@ -78,11 +78,19 @@ struct pl022_spi_slave {
  */
 static int pl022_is_supported(struct pl022_spi_slave *ps)
 {
+	u32 pid0 = readw(ps->base + SSP_PID0);
+	u32 pid1 = readw(ps->base + SSP_PID1);
+	u32 pid2 = readw(ps->base + SSP_PID2);
+	u32 pid3 = readw(ps->base + SSP_PID3);
+
+	printf("pl022_is_supported: %d, %d, %d, %d\n", pid0, pid1, pid2, pid3);
+
 	/* PL022 version is 0x00041022 */
-	if ((readw(ps->base + SSP_PID0) == 0x22) &&
-	    (readw(ps->base + SSP_PID1) == 0x10) &&
-	    ((readw(ps->base + SSP_PID2) & 0xf) == 0x04) &&
-	    (readw(ps->base + SSP_PID3) == 0x00))
+	if ((pid0 == 0x22) &&
+	    (pid1 == 0x10) &&
+	    ((pid2 & 0xf) == 0x04) &&
+	    (pid3 == 0x00))
+
 		return 1;
 
 	return 0;
@@ -157,6 +165,8 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	const u8	*txp = dout;
 	u8		*rxp = din, value;
 
+	printf("pl022_spi_xfer: flags=0x%x\n", flags);
+
 	if (bitlen == 0)
 		/* Finish any previously submitted transfers */
 		return 0;
@@ -180,12 +190,14 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	while (len_tx < len) {
 		if (readw(ps->base + SSP_SR) & SSP_SR_MASK_TNF) {
 			value = txp ? *txp++ : 0;
+			printf("Writing: 0x%x\n", value);
 			writew(value, ps->base + SSP_DR);
 			len_tx++;
 		}
 
 		if (readw(ps->base + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(ps->base + SSP_DR);
+			printf("Answer: 0x%x\n", value);
 			if (rxp)
 				*rxp++ = value;
 			len_rx++;
@@ -195,6 +207,7 @@ static int pl022_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	while (len_rx < len_tx) {
 		if (readw(ps->base + SSP_SR) & SSP_SR_MASK_RNE) {
 			value = readw(ps->base + SSP_DR);
+			printf("Reading: 0x%x\n", value);
 			if (rxp)
 				*rxp++ = value;
 			len_rx++;
@@ -217,6 +230,8 @@ static int pl022_spi_set_speed(struct udevice *bus, uint speed)
 	u32 min, max, best_freq = 0, tmp;
 	u32 rate = ps->freq;
 	bool found = false;
+
+	printf("pl022_spi_set_speed: %d\n", speed);
 
 	max = spi_rate(rate, SSP_CPSR_MIN, SSP_SCR_MIN);
 	min = spi_rate(rate, SSP_CPSR_MAX, SSP_SCR_MAX);
@@ -260,6 +275,10 @@ static int pl022_spi_set_mode(struct udevice *bus, uint mode)
 	struct pl022_spi_slave *ps = dev_get_priv(bus);
 	u16 reg;
 
+//	mode = SPI_MODE_3;
+
+	printf("pl022_spi_set_mode: 0x%x\n", mode);
+
 	reg = readw(ps->base + SSP_CR0);
 	reg &= ~(SSP_CR0_SPH | SSP_CR0_SPO);
 	if (mode & SPI_CPHA)
@@ -295,13 +314,21 @@ static int pl022_spi_of_to_plat(struct udevice *bus)
 	struct clk clkdev;
 	int ret;
 
+	printf("pl022_spi_of_to_plat: 1\n");
+
 	plat->addr = fdtdec_get_addr_size(fdt, node, "reg", &plat->size);
 
+#if 0
 	ret = clk_get_by_index(bus, 0, &clkdev);
 	if (ret)
 		return ret;
 
+	printf("pl022_spi_of_to_plat: 2\n");
+
 	plat->freq = clk_get_rate(&clkdev);
+#else
+	plat->freq = 12000000;
+#endif
 
 	return 0;
 }
