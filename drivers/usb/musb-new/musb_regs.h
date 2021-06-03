@@ -373,80 +373,80 @@
 
 #endif /* CONFIG_ARCH_SUNXI */
 
-static inline void musb_write_txfifosz(void __iomem *mbase, u8 c_size)
+static inline void musb_write_txfifosz(struct musb *musb, void __iomem *mbase, u8 c_size)
 {
-	musb_writeb(mbase, MUSB_TXFIFOSZ, c_size);
+	musb_writeb(musb, mbase, MUSB_TXFIFOSZ, c_size);
 }
 
-static inline void musb_write_txfifoadd(void __iomem *mbase, u16 c_off)
+static inline void musb_write_txfifoadd(struct musb *musb, void __iomem *mbase, u16 c_off)
 {
-	musb_writew(mbase, MUSB_TXFIFOADD, c_off);
+	musb_writew(musb, mbase, MUSB_TXFIFOADD, c_off);
 }
 
-static inline void musb_write_rxfifosz(void __iomem *mbase, u8 c_size)
+static inline void musb_write_rxfifosz(struct musb *musb, void __iomem *mbase, u8 c_size)
 {
-	musb_writeb(mbase, MUSB_RXFIFOSZ, c_size);
+	musb_writeb(musb, mbase, MUSB_RXFIFOSZ, c_size);
 }
 
-static inline void  musb_write_rxfifoadd(void __iomem *mbase, u16 c_off)
+static inline void  musb_write_rxfifoadd(struct musb *musb, void __iomem *mbase, u16 c_off)
 {
-	musb_writew(mbase, MUSB_RXFIFOADD, c_off);
+	musb_writew(musb, mbase, MUSB_RXFIFOADD, c_off);
 }
 
-static inline void musb_write_ulpi_buscontrol(void __iomem *mbase, u8 val)
+static inline void musb_write_ulpi_buscontrol(struct musb *musb, void __iomem *mbase, u8 val)
 {
 #ifndef CONFIG_ARCH_SUNXI /* No ulpi on sunxi */
-	musb_writeb(mbase, MUSB_ULPI_BUSCONTROL, val);
+	musb_writeb(musb, mbase, MUSB_ULPI_BUSCONTROL, val);
 #endif
 }
 
-static inline u8 musb_read_txfifosz(void __iomem *mbase)
+static inline u8 musb_read_txfifosz(struct musb *musb, void __iomem *mbase)
 {
-	return musb_readb(mbase, MUSB_TXFIFOSZ);
+	return musb_readb(musb, mbase, MUSB_TXFIFOSZ);
 }
 
-static inline u16 musb_read_txfifoadd(void __iomem *mbase)
+static inline u16 musb_read_txfifoadd(struct musb *musb, void __iomem *mbase)
 {
-	return musb_readw(mbase, MUSB_TXFIFOADD);
+	return musb_readw(musb, mbase, MUSB_TXFIFOADD);
 }
 
-static inline u8 musb_read_rxfifosz(void __iomem *mbase)
+static inline u8 musb_read_rxfifosz(struct musb *musb, void __iomem *mbase)
 {
-	return musb_readb(mbase, MUSB_RXFIFOSZ);
+	return musb_readb(musb, mbase, MUSB_RXFIFOSZ);
 }
 
-static inline u16  musb_read_rxfifoadd(void __iomem *mbase)
+static inline u16  musb_read_rxfifoadd(struct musb *musb, void __iomem *mbase)
 {
-	return musb_readw(mbase, MUSB_RXFIFOADD);
+	return musb_readw(musb, mbase, MUSB_RXFIFOADD);
 }
 
-static inline u8 musb_read_ulpi_buscontrol(void __iomem *mbase)
+static inline u8 musb_read_ulpi_buscontrol(struct musb *musb, void __iomem *mbase)
 {
 #ifdef CONFIG_ARCH_SUNXI /* No ulpi on sunxi */
 	return 0;
 #else
-	return musb_readb(mbase, MUSB_ULPI_BUSCONTROL);
+	return musb_readb(musb, mbase, MUSB_ULPI_BUSCONTROL);
 #endif
 }
 
-static inline u8 musb_read_configdata(void __iomem *mbase)
+static inline u8 musb_read_configdata(struct musb *musb, void __iomem *mbase)
 {
 #if defined CONFIG_MACH_SUN8I_A33 || defined CONFIG_MACH_SUN8I_A83T || \
 		defined CONFIG_MACH_SUNXI_H3_H5 || defined CONFIG_MACH_SUN50I
 	/* <Sigh> allwinner saves a reg, and we need to hardcode this */
 	return 0xde;
 #else
-	musb_writeb(mbase, MUSB_INDEX, 0);
-	return musb_readb(mbase, 0x10 + MUSB_CONFIGDATA);
+	musb_writeb(musb, mbase, MUSB_INDEX, 0);
+	return musb_readb(musb, mbase, 0x10 + MUSB_CONFIGDATA);
 #endif
 }
 
-static inline u16 musb_read_hwvers(void __iomem *mbase)
+static inline u16 musb_read_hwvers(struct musb *musb, void __iomem *mbase)
 {
 #ifdef CONFIG_ARCH_SUNXI
 	return 0; /* Unknown version */
 #else
-	return musb_readw(mbase, MUSB_HWVERS);
+	return musb_readw(musb, mbase, MUSB_HWVERS);
 #endif
 }
 
@@ -455,73 +455,73 @@ static inline void __iomem *musb_read_target_reg_base(u8 i, void __iomem *mbase)
 	return (MUSB_BUSCTL_OFFSET(i, 0) + mbase);
 }
 
-static inline void musb_write_rxfunaddr(void __iomem *ep_target_regs,
+static inline void musb_write_rxfunaddr(struct musb *musb, void __iomem *ep_target_regs,
 		u8 qh_addr_reg)
 {
-	musb_writeb(ep_target_regs, MUSB_RXFUNCADDR, qh_addr_reg);
+	musb_writeb(musb, ep_target_regs, MUSB_RXFUNCADDR, qh_addr_reg);
 }
 
-static inline void musb_write_rxhubaddr(void __iomem *ep_target_regs,
+static inline void musb_write_rxhubaddr(struct musb *musb, void __iomem *ep_target_regs,
 		u8 qh_h_addr_reg)
 {
-	musb_writeb(ep_target_regs, MUSB_RXHUBADDR, qh_h_addr_reg);
+	musb_writeb(musb, ep_target_regs, MUSB_RXHUBADDR, qh_h_addr_reg);
 }
 
-static inline void musb_write_rxhubport(void __iomem *ep_target_regs,
+static inline void musb_write_rxhubport(struct musb *musb, void __iomem *ep_target_regs,
 		u8 qh_h_port_reg)
 {
-	musb_writeb(ep_target_regs, MUSB_RXHUBPORT, qh_h_port_reg);
+	musb_writeb(musb, ep_target_regs, MUSB_RXHUBPORT, qh_h_port_reg);
 }
 
-static inline void  musb_write_txfunaddr(void __iomem *mbase, u8 epnum,
+static inline void  musb_write_txfunaddr(struct musb *musb, void __iomem *mbase, u8 epnum,
 		u8 qh_addr_reg)
 {
-	musb_writeb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXFUNCADDR),
+	musb_writeb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXFUNCADDR),
 			qh_addr_reg);
 }
 
-static inline void  musb_write_txhubaddr(void __iomem *mbase, u8 epnum,
+static inline void  musb_write_txhubaddr(struct musb *musb, void __iomem *mbase, u8 epnum,
 		u8 qh_addr_reg)
 {
-	musb_writeb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBADDR),
+	musb_writeb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBADDR),
 			qh_addr_reg);
 }
 
-static inline void  musb_write_txhubport(void __iomem *mbase, u8 epnum,
+static inline void  musb_write_txhubport(struct musb *musb, void __iomem *mbase, u8 epnum,
 		u8 qh_h_port_reg)
 {
-	musb_writeb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBPORT),
+	musb_writeb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBPORT),
 			qh_h_port_reg);
 }
 
-static inline u8 musb_read_rxfunaddr(void __iomem *mbase, u8 epnum)
+static inline u8 musb_read_rxfunaddr(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXFUNCADDR));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXFUNCADDR));
 }
 
-static inline u8 musb_read_rxhubaddr(void __iomem *mbase, u8 epnum)
+static inline u8 musb_read_rxhubaddr(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXHUBADDR));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXHUBADDR));
 }
 
-static inline u8 musb_read_rxhubport(void __iomem *mbase, u8 epnum)
+static inline u8 musb_read_rxhubport(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXHUBPORT));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_RXHUBPORT));
 }
 
-static inline u8  musb_read_txfunaddr(void __iomem *mbase, u8 epnum)
+static inline u8  musb_read_txfunaddr(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXFUNCADDR));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXFUNCADDR));
 }
 
-static inline u8  musb_read_txhubaddr(void __iomem *mbase, u8 epnum)
+static inline u8  musb_read_txhubaddr(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBADDR));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBADDR));
 }
 
-static inline u8  musb_read_txhubport(void __iomem *mbase, u8 epnum)
+static inline u8  musb_read_txhubport(struct musb *musb, void __iomem *mbase, u8 epnum)
 {
-	return musb_readb(mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBPORT));
+	return musb_readb(musb, mbase, MUSB_BUSCTL_OFFSET(epnum, MUSB_TXHUBPORT));
 }
 
 #endif	/* __MUSB_REGS_H__ */

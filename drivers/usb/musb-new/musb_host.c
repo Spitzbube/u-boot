@@ -99,14 +99,14 @@ static void musb_h_tx_flush_fifo(struct musb_hw_ep *ep)
 	u16		lastcsr = 0;
 	int		retries = 1000;
 
-	csr = musb_readw(epio, MUSB_TXCSR);
+	csr = musb_readw(musb, epio, MUSB_TXCSR);
 	while (csr & MUSB_TXCSR_FIFONOTEMPTY) {
 		if (csr != lastcsr)
 			dev_dbg(musb->controller, "Host TX FIFONOTEMPTY csr: %02x\n", csr);
 		lastcsr = csr;
 		csr |= MUSB_TXCSR_FLUSHFIFO;
-		musb_writew(epio, MUSB_TXCSR, csr);
-		csr = musb_readw(epio, MUSB_TXCSR);
+		musb_writew(musb, epio, MUSB_TXCSR, csr);
+		csr = musb_readw(musb, epio, MUSB_TXCSR);
 		if (WARN(retries-- < 1,
 				"Could not flush host TX%d fifo: csr: %04x\n",
 				ep->epnum, csr))
@@ -123,11 +123,11 @@ static void musb_h_ep0_flush_fifo(struct musb_hw_ep *ep)
 
 	/* scrub any data left in the fifo */
 	do {
-		csr = musb_readw(epio, MUSB_TXCSR);
+		csr = musb_readw(ep->musb, epio, MUSB_TXCSR);
 		if (!(csr & (MUSB_CSR0_TXPKTRDY | MUSB_CSR0_RXPKTRDY)))
 			break;
-		musb_writew(epio, MUSB_TXCSR, MUSB_CSR0_FLUSHFIFO);
-		csr = musb_readw(epio, MUSB_TXCSR);
+		musb_writew(ep->musb, epio, MUSB_TXCSR, MUSB_CSR0_FLUSHFIFO);
+		csr = musb_readw(ep->musb, epio, MUSB_TXCSR);
 		udelay(10);
 	} while (--retries);
 
@@ -135,7 +135,7 @@ static void musb_h_ep0_flush_fifo(struct musb_hw_ep *ep)
 			ep->epnum, csr);
 
 	/* and reset for the next transfer */
-	musb_writew(epio, MUSB_TXCSR, 0);
+	musb_writew(ep->musb, epio, MUSB_TXCSR, 0);
 }
 
 /*
@@ -148,12 +148,12 @@ static inline void musb_h_tx_start(struct musb_hw_ep *ep)
 
 	/* NOTE: no locks here; caller should lock and select EP */
 	if (ep->epnum) {
-		txcsr = musb_readw(ep->regs, MUSB_TXCSR);
+		txcsr = musb_readw(ep->musb, ep->regs, MUSB_TXCSR);
 		txcsr |= MUSB_TXCSR_TXPKTRDY | MUSB_TXCSR_H_WZC_BITS;
-		musb_writew(ep->regs, MUSB_TXCSR, txcsr);
+		musb_writew(ep->musb, ep->regs, MUSB_TXCSR, txcsr);
 	} else {
 		txcsr = MUSB_CSR0_H_SETUPPKT | MUSB_CSR0_TXPKTRDY;
-		musb_writew(ep->regs, MUSB_CSR0, txcsr);
+		musb_writew(ep->musb, ep->regs, MUSB_CSR0, txcsr);
 	}
 
 }
@@ -163,11 +163,11 @@ static inline void musb_h_tx_dma_start(struct musb_hw_ep *ep)
 	u16	txcsr;
 
 	/* NOTE: no locks here; caller should lock and select EP */
-	txcsr = musb_readw(ep->regs, MUSB_TXCSR);
+	txcsr = musb_readw(ep->musb, ep->regs, MUSB_TXCSR);
 	txcsr |= MUSB_TXCSR_DMAENAB | MUSB_TXCSR_H_WZC_BITS;
 	if (is_cppi_enabled())
 		txcsr |= MUSB_TXCSR_DMAMODE;
-	musb_writew(ep->regs, MUSB_TXCSR, txcsr);
+	musb_writew(ep->musb, ep->regs, MUSB_TXCSR, txcsr);
 }
 
 static void musb_ep_set_qh(struct musb_hw_ep *ep, int is_in, struct musb_qh *qh)
@@ -258,7 +258,7 @@ musb_start_urb(struct musb *musb, int is_in, struct musb_qh *qh)
 #endif
 	case USB_ENDPOINT_XFER_INT:
 		dev_dbg(musb->controller, "check whether there's still time for periodic Tx\n");
-		frame = musb_readw(mbase, MUSB_FRAME);
+		frame = musb_readw(musb, mbase, MUSB_FRAME);
 		/* FIXME this doesn't implement that scheduling policy ...
 		 * or handle framecounter wrapping
 		 */
@@ -276,7 +276,7 @@ musb_start_urb(struct musb *musb, int is_in, struct musb_qh *qh)
 			/* enable SOF interrupt so we can count down */
 			dev_dbg(musb->controller, "SOF for %d\n", epnum);
 #if 1 /* ifndef	CONFIG_ARCH_DAVINCI */
-			musb_writeb(mbase, MUSB_INTRUSBE, 0xff);
+			musb_writeb(musb, mbase, MUSB_INTRUSBE, 0xff);
 #endif
 #ifndef __UBOOT__
 		}
@@ -327,9 +327,9 @@ static inline void musb_save_toggle(struct musb_qh *qh, int is_in,
 	 */
 
 	if (is_in)
-		csr = musb_readw(epio, MUSB_RXCSR) & MUSB_RXCSR_H_DATATOGGLE;
+		csr = musb_readw(qh->hw_ep->musb, epio, MUSB_RXCSR) & MUSB_RXCSR_H_DATATOGGLE;
 	else
-		csr = musb_readw(epio, MUSB_TXCSR) & MUSB_TXCSR_H_DATATOGGLE;
+		csr = musb_readw(qh->hw_ep->musb, epio, MUSB_TXCSR) & MUSB_TXCSR_H_DATATOGGLE;
 
 	usb_settoggle(urb->dev, qh->epnum, !is_in, csr ? 1 : 0);
 }
@@ -440,11 +440,11 @@ static u16 musb_h_flush_rxfifo(struct musb_hw_ep *hw_ep, u16 csr)
 		| MUSB_RXCSR_AUTOCLEAR);
 
 	/* write 2x to allow double buffering */
-	musb_writew(hw_ep->regs, MUSB_RXCSR, csr);
-	musb_writew(hw_ep->regs, MUSB_RXCSR, csr);
+	musb_writew(hw_ep->musb, hw_ep->regs, MUSB_RXCSR, csr);
+	musb_writew(hw_ep->musb, hw_ep->regs, MUSB_RXCSR, csr);
 
 	/* flush writebuffer */
-	return musb_readw(hw_ep->regs, MUSB_RXCSR);
+	return musb_readw(hw_ep->musb, hw_ep->regs, MUSB_RXCSR);
 }
 
 /*
@@ -466,7 +466,7 @@ musb_host_packet_rx(struct musb *musb, struct urb *urb, u8 epnum, u8 iso_err)
 	void			*buffer = urb->transfer_buffer;
 
 	/* musb_ep_select(mbase, epnum); */
-	rx_count = musb_readw(epio, MUSB_RXCOUNT);
+	rx_count = musb_readw(musb, epio, MUSB_RXCOUNT);
 	dev_dbg(musb->controller, "RX%d count %d, buffer %p len %d/%d\n", epnum, rx_count,
 			urb->transfer_buffer, qh->offset,
 			urb->transfer_buffer_length);
@@ -532,7 +532,7 @@ musb_host_packet_rx(struct musb *musb, struct urb *urb, u8 epnum, u8 iso_err)
 
 	musb_read_fifo(hw_ep, length, buf);
 
-	csr = musb_readw(epio, MUSB_RXCSR);
+	csr = musb_readw(musb, epio, MUSB_RXCSR);
 	csr |= MUSB_RXCSR_H_WZC_BITS;
 	if (unlikely(do_flush))
 		musb_h_flush_rxfifo(hw_ep, csr);
@@ -541,7 +541,7 @@ musb_host_packet_rx(struct musb *musb, struct urb *urb, u8 epnum, u8 iso_err)
 		csr &= ~(MUSB_RXCSR_RXPKTRDY | MUSB_RXCSR_H_REQPKT);
 		if (!done)
 			csr |= MUSB_RXCSR_H_REQPKT;
-		musb_writew(epio, MUSB_RXCSR, csr);
+		musb_writew(musb, epio, MUSB_RXCSR, csr);
 	}
 
 	return done;
@@ -567,11 +567,11 @@ musb_rx_reinit(struct musb *musb, struct musb_qh *qh, struct musb_hw_ep *ep)
 
 	/* if programmed for Tx, put it in RX mode */
 	if (ep->is_shared_fifo) {
-		csr = musb_readw(ep->regs, MUSB_TXCSR);
+		csr = musb_readw(musb, ep->regs, MUSB_TXCSR);
 		if (csr & MUSB_TXCSR_MODE) {
 			musb_h_tx_flush_fifo(ep);
-			csr = musb_readw(ep->regs, MUSB_TXCSR);
-			musb_writew(ep->regs, MUSB_TXCSR,
+			csr = musb_readw(musb, ep->regs, MUSB_TXCSR);
+			musb_writew(musb, ep->regs, MUSB_TXCSR,
 				    csr | MUSB_TXCSR_FRCDATATOG);
 		}
 
@@ -580,39 +580,39 @@ musb_rx_reinit(struct musb *musb, struct musb_qh *qh, struct musb_hw_ep *ep)
 		 * NOTE: we mustn't clear the DMAMODE bit before DMAENAB.
 		 */
 		if (csr & MUSB_TXCSR_DMAMODE)
-			musb_writew(ep->regs, MUSB_TXCSR, MUSB_TXCSR_DMAMODE);
-		musb_writew(ep->regs, MUSB_TXCSR, 0);
+			musb_writew(musb, ep->regs, MUSB_TXCSR, MUSB_TXCSR_DMAMODE);
+		musb_writew(musb, ep->regs, MUSB_TXCSR, 0);
 
 	/* scrub all previous state, clearing toggle */
 	} else {
-		csr = musb_readw(ep->regs, MUSB_RXCSR);
+		csr = musb_readw(musb, ep->regs, MUSB_RXCSR);
 		if (csr & MUSB_RXCSR_RXPKTRDY)
 			WARNING("rx%d, packet/%d ready?\n", ep->epnum,
-				musb_readw(ep->regs, MUSB_RXCOUNT));
+				musb_readw(musb, ep->regs, MUSB_RXCOUNT));
 
 		musb_h_flush_rxfifo(ep, MUSB_RXCSR_CLRDATATOG);
 	}
 
 	/* target addr and (for multipoint) hub addr/port */
 	if (musb->is_multipoint) {
-		musb_write_rxfunaddr(ep->target_regs, qh->addr_reg);
-		musb_write_rxhubaddr(ep->target_regs, qh->h_addr_reg);
-		musb_write_rxhubport(ep->target_regs, qh->h_port_reg);
+		musb_write_rxfunaddr(musb, ep->target_regs, qh->addr_reg);
+		musb_write_rxhubaddr(musb, ep->target_regs, qh->h_addr_reg);
+		musb_write_rxhubport(musb, ep->target_regs, qh->h_port_reg);
 
 	} else
-		musb_writeb(musb->mregs, MUSB_FADDR, qh->addr_reg);
+		musb_writeb(musb, musb->mregs, MUSB_FADDR, qh->addr_reg);
 
 	/* protocol/endpoint, interval/NAKlimit, i/o size */
-	musb_writeb(ep->regs, MUSB_RXTYPE, qh->type_reg);
-	musb_writeb(ep->regs, MUSB_RXINTERVAL, qh->intv_reg);
+	musb_writeb(musb, ep->regs, MUSB_RXTYPE, qh->type_reg);
+	musb_writeb(musb, ep->regs, MUSB_RXINTERVAL, qh->intv_reg);
 	/* NOTE: bulk combining rewrites high bits of maxpacket */
 	/* Set RXMAXP with the FIFO size of the endpoint
 	 * to disable double buffer mode.
 	 */
 	if (musb->double_buffer_not_ok)
-		musb_writew(ep->regs, MUSB_RXMAXP, ep->max_packet_sz_rx);
+		musb_writew(musb, ep->regs, MUSB_RXMAXP, ep->max_packet_sz_rx);
 	else
-		musb_writew(ep->regs, MUSB_RXMAXP,
+		musb_writew(musb, ep->regs, MUSB_RXMAXP,
 				qh->maxpacket | ((qh->hb_mult - 1) << 11));
 
 	ep->rx_reinit = 0;
@@ -672,9 +672,9 @@ static bool musb_tx_dma_program(struct dma_controller *dma,
 		dma->channel_release(channel);
 		hw_ep->tx_channel = NULL;
 
-		csr = musb_readw(epio, MUSB_TXCSR);
+		csr = musb_readw(hw_ep->musb, epio, MUSB_TXCSR);
 		csr &= ~(MUSB_TXCSR_AUTOSET | MUSB_TXCSR_DMAENAB);
-		musb_writew(epio, MUSB_TXCSR, csr | MUSB_TXCSR_H_WZC_BITS);
+		musb_writew(hw_ep->musb, epio, MUSB_TXCSR, csr | MUSB_TXCSR_H_WZC_BITS);
 		return false;
 	}
 	return true;
@@ -705,7 +705,7 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 			qh->h_addr_reg, qh->h_port_reg,
 			len);
 
-	musb_ep_select(mbase, epnum);
+	musb_ep_select(musb, mbase, epnum);
 
 	/* candidate for DMA? */
 	dma_controller = musb->dma_controller;
@@ -730,11 +730,11 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 		u16	int_txe;
 		u16	load_count;
 
-		csr = musb_readw(epio, MUSB_TXCSR);
+		csr = musb_readw(musb, epio, MUSB_TXCSR);
 
 		/* disable interrupt in case we flush */
-		int_txe = musb_readw(mbase, MUSB_INTRTXE);
-		musb_writew(mbase, MUSB_INTRTXE, int_txe & ~(1 << epnum));
+		int_txe = musb_readw(musb, mbase, MUSB_INTRTXE);
+		musb_writew(musb, mbase, MUSB_INTRTXE, int_txe & ~(1 << epnum));
 
 		/* general endpoint setup */
 		if (epnum) {
@@ -762,11 +762,11 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 			else
 				csr |= MUSB_TXCSR_CLRDATATOG;
 
-			musb_writew(epio, MUSB_TXCSR, csr);
+			musb_writew(musb, epio, MUSB_TXCSR, csr);
 			/* REVISIT may need to clear FLUSHFIFO ... */
 			csr &= ~MUSB_TXCSR_DMAMODE;
-			musb_writew(epio, MUSB_TXCSR, csr);
-			csr = musb_readw(epio, MUSB_TXCSR);
+			musb_writew(musb, epio, MUSB_TXCSR, csr);
+			csr = musb_readw(musb, epio, MUSB_TXCSR);
 		} else {
 			/* endpoint 0: just flush */
 			musb_h_ep0_flush_fifo(hw_ep);
@@ -774,32 +774,32 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 
 		/* target addr and (for multipoint) hub addr/port */
 		if (musb->is_multipoint) {
-			musb_write_txfunaddr(mbase, epnum, qh->addr_reg);
-			musb_write_txhubaddr(mbase, epnum, qh->h_addr_reg);
-			musb_write_txhubport(mbase, epnum, qh->h_port_reg);
+			musb_write_txfunaddr(musb, mbase, epnum, qh->addr_reg);
+			musb_write_txhubaddr(musb, mbase, epnum, qh->h_addr_reg);
+			musb_write_txhubport(musb, mbase, epnum, qh->h_port_reg);
 /* FIXME if !epnum, do the same for RX ... */
 		} else
-			musb_writeb(mbase, MUSB_FADDR, qh->addr_reg);
+			musb_writeb(musb, mbase, MUSB_FADDR, qh->addr_reg);
 
 		/* protocol/endpoint/interval/NAKlimit */
 		if (epnum) {
-			musb_writeb(epio, MUSB_TXTYPE, qh->type_reg);
+			musb_writeb(musb, epio, MUSB_TXTYPE, qh->type_reg);
 			if (musb->double_buffer_not_ok)
-				musb_writew(epio, MUSB_TXMAXP,
+				musb_writew(musb, epio, MUSB_TXMAXP,
 						hw_ep->max_packet_sz_tx);
 			else if (can_bulk_split(musb, qh->type))
-				musb_writew(epio, MUSB_TXMAXP, packet_sz
+				musb_writew(musb, epio, MUSB_TXMAXP, packet_sz
 					| ((hw_ep->max_packet_sz_tx /
 						packet_sz) - 1) << 11);
 			else
-				musb_writew(epio, MUSB_TXMAXP,
+				musb_writew(musb, epio, MUSB_TXMAXP,
 						qh->maxpacket |
 						((qh->hb_mult - 1) << 11));
-			musb_writeb(epio, MUSB_TXINTERVAL, qh->intv_reg);
+			musb_writeb(musb, epio, MUSB_TXINTERVAL, qh->intv_reg);
 		} else {
-			musb_writeb(epio, MUSB_NAKLIMIT0, qh->intv_reg);
+			musb_writeb(musb, epio, MUSB_NAKLIMIT0, qh->intv_reg);
 			if (musb->is_multipoint)
-				musb_writeb(epio, MUSB_TYPE0,
+				musb_writeb(musb, epio, MUSB_TYPE0,
 						qh->type_reg);
 		}
 
@@ -820,7 +820,7 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 		}
 
 		/* re-enable interrupt */
-		musb_writew(mbase, MUSB_INTRTXE, int_txe);
+		musb_writew(musb, mbase, MUSB_INTRTXE, int_txe);
 
 	/* IN/receive */
 	} else {
@@ -839,7 +839,7 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 				csr |= MUSB_RXCSR_DISNYET;
 
 		} else {
-			csr = musb_readw(hw_ep->regs, MUSB_RXCSR);
+			csr = musb_readw(musb, hw_ep->regs, MUSB_RXCSR);
 
 			if (csr & (MUSB_RXCSR_RXPKTRDY
 					| MUSB_RXCSR_DMAENAB
@@ -859,8 +859,8 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 			qh->segsize = len;
 
 			/* AUTOREQ is in a DMA register */
-			musb_writew(hw_ep->regs, MUSB_RXCSR, csr);
-			csr = musb_readw(hw_ep->regs, MUSB_RXCSR);
+			musb_writew(musb, hw_ep->regs, MUSB_RXCSR, csr);
+			csr = musb_readw(musb, hw_ep->regs, MUSB_RXCSR);
 
 			/*
 			 * Unless caller treats short RX transfers as
@@ -880,8 +880,8 @@ static void musb_ep_program(struct musb *musb, u8 epnum,
 
 		csr |= MUSB_RXCSR_H_REQPKT;
 		dev_dbg(musb->controller, "RXCSR%d := %04x\n", epnum, csr);
-		musb_writew(hw_ep->regs, MUSB_RXCSR, csr);
-		csr = musb_readw(hw_ep->regs, MUSB_RXCSR);
+		musb_writew(musb, hw_ep->regs, MUSB_RXCSR, csr);
+		csr = musb_readw(musb, hw_ep->regs, MUSB_RXCSR);
 	}
 }
 
@@ -981,10 +981,10 @@ irqreturn_t musb_h_ep0_irq(struct musb *musb)
 	/* ep0 only has one queue, "in" */
 	urb = next_urb(qh);
 
-	musb_ep_select(mbase, 0);
-	csr = musb_readw(epio, MUSB_CSR0);
+	musb_ep_select(musb, mbase, 0);
+	csr = musb_readw(musb, epio, MUSB_CSR0);
 	len = (csr & MUSB_CSR0_RXPKTRDY)
-			? musb_readb(epio, MUSB_COUNT0)
+			? musb_readb(musb, epio, MUSB_COUNT0)
 			: 0;
 
 	dev_dbg(musb->controller, "<== csr0 %04x, qh %p, count %d, urb %p, stage %d\n",
@@ -1016,7 +1016,7 @@ irqreturn_t musb_h_ep0_irq(struct musb *musb)
 		 * if (qh->ring.next != &musb->control), then
 		 * we have a candidate... NAKing is *NOT* an error
 		 */
-		musb_writew(epio, MUSB_CSR0, 0);
+		musb_writew(musb, epio, MUSB_CSR0, 0);
 		retval = IRQ_HANDLED;
 	}
 
@@ -1030,17 +1030,17 @@ irqreturn_t musb_h_ep0_irq(struct musb *musb)
 		/* use the proper sequence to abort the transfer */
 		if (csr & MUSB_CSR0_H_REQPKT) {
 			csr &= ~MUSB_CSR0_H_REQPKT;
-			musb_writew(epio, MUSB_CSR0, csr);
+			musb_writew(musb, epio, MUSB_CSR0, csr);
 			csr &= ~MUSB_CSR0_H_NAKTIMEOUT;
-			musb_writew(epio, MUSB_CSR0, csr);
+			musb_writew(musb, epio, MUSB_CSR0, csr);
 		} else {
 			musb_h_ep0_flush_fifo(hw_ep);
 		}
 
-		musb_writeb(epio, MUSB_NAKLIMIT0, 0);
+		musb_writeb(musb, epio, MUSB_NAKLIMIT0, 0);
 
 		/* clear it */
-		musb_writew(epio, MUSB_CSR0, 0);
+		musb_writew(musb, epio, MUSB_CSR0, 0);
 	}
 
 	if (unlikely(!urb)) {
@@ -1074,7 +1074,7 @@ irqreturn_t musb_h_ep0_irq(struct musb *musb)
 			dev_dbg(musb->controller, "ep0 STATUS, csr %04x\n", csr);
 
 		}
-		musb_writew(epio, MUSB_CSR0, csr);
+		musb_writew(musb, epio, MUSB_CSR0, csr);
 		retval = IRQ_HANDLED;
 	} else
 		musb->ep0_stage = MUSB_EP0_IDLE;
@@ -1120,8 +1120,8 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 	struct dma_channel	*dma;
 	bool			transfer_pending = false;
 
-	musb_ep_select(mbase, epnum);
-	tx_csr = musb_readw(epio, MUSB_TXCSR);
+	musb_ep_select(musb, mbase, epnum);
+	tx_csr = musb_readw(musb, epio, MUSB_TXCSR);
 
 	/* with CPPI, DMA sometimes triggers "extra" irqs */
 	if (!urb) {
@@ -1159,8 +1159,8 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 		 * if (bulk && qh->ring.next != &musb->out_bulk), then
 		 * we have a candidate... NAKing is *NOT* an error
 		 */
-		musb_ep_select(mbase, epnum);
-		musb_writew(epio, MUSB_TXCSR,
+		musb_ep_select(musb, mbase, epnum);
+		musb_writew(musb, epio, MUSB_TXCSR,
 				MUSB_TXCSR_H_WZC_BITS
 				| MUSB_TXCSR_TXPKTRDY);
 		return;
@@ -1183,11 +1183,11 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 				| MUSB_TXCSR_H_NAKTIMEOUT
 				);
 
-		musb_ep_select(mbase, epnum);
-		musb_writew(epio, MUSB_TXCSR, tx_csr);
+		musb_ep_select(musb, mbase, epnum);
+		musb_writew(musb, epio, MUSB_TXCSR, tx_csr);
 		/* REVISIT may need to clear FLUSHFIFO ... */
-		musb_writew(epio, MUSB_TXCSR, tx_csr);
-		musb_writeb(epio, MUSB_TXINTERVAL, 0);
+		musb_writew(musb, epio, MUSB_TXCSR, tx_csr);
+		musb_writeb(musb, epio, MUSB_TXINTERVAL, 0);
 
 		done = true;
 	}
@@ -1224,16 +1224,16 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 			 * double-buffered FIFO mode, so we do an extra TXCSR
 			 * read for debouncing...
 			 */
-			tx_csr &= musb_readw(epio, MUSB_TXCSR);
+			tx_csr &= musb_readw(musb, epio, MUSB_TXCSR);
 			if (tx_csr & MUSB_TXCSR_TXPKTRDY) {
 				tx_csr &= ~(MUSB_TXCSR_DMAENAB |
 					    MUSB_TXCSR_TXPKTRDY);
-				musb_writew(epio, MUSB_TXCSR,
+				musb_writew(musb, epio, MUSB_TXCSR,
 					    tx_csr | MUSB_TXCSR_H_WZC_BITS);
 			}
 			tx_csr &= ~(MUSB_TXCSR_DMAMODE |
 				    MUSB_TXCSR_TXPKTRDY);
-			musb_writew(epio, MUSB_TXCSR,
+			musb_writew(musb, epio, MUSB_TXCSR,
 				    tx_csr | MUSB_TXCSR_H_WZC_BITS);
 
 			/*
@@ -1242,7 +1242,7 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 			 * too late (after TXPKTRDY was cleared by controller).
 			 * Re-read TXCSR as we have spoiled its previous value.
 			 */
-			tx_csr = musb_readw(epio, MUSB_TXCSR);
+			tx_csr = musb_readw(musb, epio, MUSB_TXCSR);
 		}
 
 		/*
@@ -1340,8 +1340,8 @@ void musb_host_tx(struct musb *musb, u8 epnum)
 	musb_write_fifo(hw_ep, length, urb->transfer_buffer + offset);
 	qh->segsize = length;
 
-	musb_ep_select(mbase, epnum);
-	musb_writew(epio, MUSB_TXCSR,
+	musb_ep_select(musb, mbase, epnum);
+	musb_writew(musb, epio, MUSB_TXCSR,
 			MUSB_TXCSR_H_WZC_BITS | MUSB_TXCSR_TXPKTRDY);
 }
 
@@ -1397,14 +1397,14 @@ static void musb_bulk_rx_nak_timeout(struct musb *musb, struct musb_hw_ep *ep)
 	struct musb_qh		*cur_qh, *next_qh;
 	u16			rx_csr;
 
-	musb_ep_select(mbase, ep->epnum);
+	musb_ep_select(musb, mbase, ep->epnum);
 	dma = is_dma_capable() ? ep->rx_channel : NULL;
 
 	/* clear nak timeout bit */
-	rx_csr = musb_readw(epio, MUSB_RXCSR);
+	rx_csr = musb_readw(musb, epio, MUSB_RXCSR);
 	rx_csr |= MUSB_RXCSR_H_WZC_BITS;
 	rx_csr &= ~MUSB_RXCSR_DATAERROR;
-	musb_writew(epio, MUSB_RXCSR, rx_csr);
+	musb_writew(musb, epio, MUSB_RXCSR, rx_csr);
 
 	cur_qh = first_qh(&musb->in_bulk);
 	if (cur_qh) {
@@ -1448,14 +1448,14 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 	u32			status;
 	struct dma_channel	*dma;
 
-	musb_ep_select(mbase, epnum);
+	musb_ep_select(musb, mbase, epnum);
 
 	urb = next_urb(qh);
 	dma = is_dma_capable() ? hw_ep->rx_channel : NULL;
 	status = 0;
 	xfer_len = 0;
 
-	rx_csr = musb_readw(epio, MUSB_RXCSR);
+	rx_csr = musb_readw(musb, epio, MUSB_RXCSR);
 	val = rx_csr;
 
 	if (unlikely(!urb)) {
@@ -1464,7 +1464,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 		 * with fifo full.  (Only with DMA??)
 		 */
 		dev_dbg(musb->controller, "BOGUS RX%d ready, csr %04x, count %d\n", epnum, val,
-			musb_readw(epio, MUSB_RXCOUNT));
+			musb_readw(musb, epio, MUSB_RXCOUNT));
 		musb_h_flush_rxfifo(hw_ep, MUSB_RXCSR_CLRDATATOG);
 		return;
 	}
@@ -1487,7 +1487,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 		dev_dbg(musb->controller, "end %d RX proto error\n", epnum);
 
 		status = -EPROTO;
-		musb_writeb(epio, MUSB_RXINTERVAL, 0);
+		musb_writeb(musb, epio, MUSB_RXINTERVAL, 0);
 
 	} else if (rx_csr & MUSB_RXCSR_DATAERROR) {
 
@@ -1508,10 +1508,10 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 				musb_bulk_rx_nak_timeout(musb, hw_ep);
 				return;
 			}
-			musb_ep_select(mbase, epnum);
+			musb_ep_select(musb, mbase, epnum);
 			rx_csr |= MUSB_RXCSR_H_WZC_BITS;
 			rx_csr &= ~MUSB_RXCSR_DATAERROR;
-			musb_writew(epio, MUSB_RXCSR, rx_csr);
+			musb_writew(musb, epio, MUSB_RXCSR, rx_csr);
 
 			goto finish;
 		} else {
@@ -1534,7 +1534,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 			xfer_len = dma->actual_len;
 		}
 		musb_h_flush_rxfifo(hw_ep, MUSB_RXCSR_CLRDATATOG);
-		musb_writeb(epio, MUSB_RXINTERVAL, 0);
+		musb_writeb(musb, epio, MUSB_RXINTERVAL, 0);
 		done = true;
 		goto finish;
 	}
@@ -1570,8 +1570,8 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 				xfer_len, dma ? ", dma" : "");
 		rx_csr &= ~MUSB_RXCSR_H_REQPKT;
 
-		musb_ep_select(mbase, epnum);
-		musb_writew(epio, MUSB_RXCSR,
+		musb_ep_select(musb, mbase, epnum);
+		musb_writew(musb, epio, MUSB_RXCSR,
 				MUSB_RXCSR_H_WZC_BITS | rx_csr);
 	}
 #endif
@@ -1582,7 +1582,7 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 			| MUSB_RXCSR_H_AUTOREQ
 			| MUSB_RXCSR_AUTOCLEAR
 			| MUSB_RXCSR_RXPKTRDY);
-		musb_writew(hw_ep->regs, MUSB_RXCSR, val);
+		musb_writew(musb, hw_ep->regs, MUSB_RXCSR, val);
 
 #ifdef CONFIG_USB_INVENTRA_DMA
 		if (usb_pipeisoc(pipe)) {
@@ -1633,9 +1633,9 @@ void musb_host_rx(struct musb *musb, u8 epnum)
 
 /* SCRUB (RX) */
 			/* do the proper sequence to abort the transfer */
-			musb_ep_select(mbase, epnum);
+			musb_ep_select(musb, mbase, epnum);
 			val &= ~MUSB_RXCSR_H_REQPKT;
-			musb_writew(epio, MUSB_RXCSR, val);
+			musb_writew(musb, epio, MUSB_RXCSR, val);
 			goto finish;
 		}
 
@@ -1850,7 +1850,7 @@ static int musb_schedule(
 			 */
 			hw_ep = musb->endpoints + epnum;
 			toggle = usb_gettoggle(urb->dev, qh->epnum, !is_in);
-			txtype = (musb_readb(hw_ep->regs, MUSB_TXTYPE)
+			txtype = (musb_readb(musb, hw_ep->regs, MUSB_TXTYPE)
 					>> 4) & 0x3;
 			if (!is_in && (qh->type == USB_ENDPOINT_XFER_BULK) &&
 				toggle && (txtype == USB_ENDPOINT_XFER_ISOC))
@@ -1904,7 +1904,7 @@ success:
 /* check if transaction translator is needed for device */
 static int tt_needed(struct musb *musb, struct usb_device *dev)
 {
-	if ((musb_readb(musb->mregs, MUSB_POWER) & MUSB_POWER_HSMODE) &&
+	if ((musb_readb(musb, musb->mregs, MUSB_POWER) & MUSB_POWER_HSMODE) &&
 			(dev->speed < USB_SPEED_HIGH))
 		return 1;
 	return 0;
@@ -2134,7 +2134,7 @@ static int musb_cleanup_urb(struct urb *urb, struct musb_qh *qh)
 	int			status = 0;
 	u16			csr;
 
-	musb_ep_select(regs, hw_end);
+	musb_ep_select(musb, regs, hw_end);
 
 	if (is_dma_capable()) {
 		struct dma_channel	*dma;
@@ -2161,18 +2161,18 @@ static int musb_cleanup_urb(struct urb *urb, struct musb_qh *qh)
 		 */
 	} else if (ep->epnum) {
 		musb_h_tx_flush_fifo(ep);
-		csr = musb_readw(epio, MUSB_TXCSR);
+		csr = musb_readw(musb, epio, MUSB_TXCSR);
 		csr &= ~(MUSB_TXCSR_AUTOSET
 			| MUSB_TXCSR_DMAENAB
 			| MUSB_TXCSR_H_RXSTALL
 			| MUSB_TXCSR_H_NAKTIMEOUT
 			| MUSB_TXCSR_H_ERROR
 			| MUSB_TXCSR_TXPKTRDY);
-		musb_writew(epio, MUSB_TXCSR, csr);
+		musb_writew(musb, epio, MUSB_TXCSR, csr);
 		/* REVISIT may need to clear FLUSHFIFO ... */
-		musb_writew(epio, MUSB_TXCSR, csr);
+		musb_writew(musb, epio, MUSB_TXCSR, csr);
 		/* flush cpu writebuffer */
-		csr = musb_readw(epio, MUSB_TXCSR);
+		csr = musb_readw(musb, epio, MUSB_TXCSR);
 	} else  {
 		musb_h_ep0_flush_fifo(ep);
 	}

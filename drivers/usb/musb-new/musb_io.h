@@ -42,18 +42,35 @@ static inline void writesb(const void __iomem *addr, const void *buf, int len)
 
 /* NOTE:  these offsets are all in bytes */
 
-static inline u16 musb_readw(const void __iomem *addr, unsigned offset)
-	{ return __raw_readw(addr + offset); }
+static inline u16 musb_readw(struct musb *musb, const void __iomem *addr, unsigned offset)
+	{
+		if (musb->ops->musb_readw)
+			return musb->ops->musb_readw(musb, addr, offset);
+
+		return __raw_readw(addr + offset);
+	}
 
 static inline u32 musb_readl(const void __iomem *addr, unsigned offset)
-	{ return __raw_readl(addr + offset); }
+	{
+		return __raw_readl(addr + offset);
+	}
 
 
-static inline void musb_writew(void __iomem *addr, unsigned offset, u16 data)
-	{ __raw_writew(data, addr + offset); }
+static inline void musb_writew(struct musb *musb, void __iomem *addr, unsigned offset, u16 data)
+	{
+		if (musb->ops->musb_writew)
+		{
+			musb->ops->musb_writew(musb, addr, offset, data);
+			return;
+		}
+
+		__raw_writew(data, addr + offset);
+	}
 
 static inline void musb_writel(void __iomem *addr, unsigned offset, u32 data)
-	{ __raw_writel(data, addr + offset); }
+	{
+		__raw_writel(data, addr + offset);
+	}
 
 
 #if defined(CONFIG_USB_MUSB_TUSB6010) || defined (CONFIG_USB_MUSB_TUSB6010_MODULE)
@@ -90,11 +107,24 @@ static inline void musb_writeb(void __iomem *addr, unsigned offset, u8 data)
 
 #else
 
-static inline u8 musb_readb(const void __iomem *addr, unsigned offset)
-	{ return __raw_readb(addr + offset); }
+static inline u8 musb_readb(struct musb *musb, const void __iomem *addr, unsigned offset)
+	{
+		if (musb->ops->musb_readb)
+			return musb->ops->musb_readb(musb, addr, offset);
 
-static inline void musb_writeb(void __iomem *addr, unsigned offset, u8 data)
-	{ __raw_writeb(data, addr + offset); }
+		return __raw_readb(addr + offset);
+	}
+
+static inline void musb_writeb(struct musb *musb, void __iomem *addr, unsigned offset, u8 data)
+	{
+		if (musb->ops->musb_writeb)
+		{
+			musb->ops->musb_writeb(musb, addr, offset, data);
+			return;
+		}
+
+		__raw_writeb(data, addr + offset);
+	}
 
 #endif	/* CONFIG_USB_MUSB_TUSB6010 */
 

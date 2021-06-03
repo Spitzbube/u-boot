@@ -64,6 +64,9 @@
  * Most of the conditional compilation will (someday) vanish.
  */
 
+//#define DEBUG
+//#define pr_debug printf
+
 #ifndef __UBOOT__
 #include <log.h>
 #include <dm/device_compat.h>
@@ -230,6 +233,12 @@ void musb_write_fifo(struct musb_hw_ep *hw_ep, u16 len, const u8 *src)
 	dev_dbg(musb->controller, "%cX ep%d fifo %p count %d buf %p\n",
 			'T', hw_ep->epnum, fifo, len, src);
 
+#if defined(CONFIG_USB_MUSB_MB86H60)
+	while (len--)
+	{
+		musb_writeb(musb, fifo, 0, *src++);
+	}
+#else
 	/* we can't assume unaligned reads work */
 	if (likely((0x01 & (unsigned long) src) == 0)) {
 		u16	index = 0;
@@ -256,6 +265,7 @@ void musb_write_fifo(struct musb_hw_ep *hw_ep, u16 len, const u8 *src)
 		/* byte aligned */
 		writesb(fifo, src, len);
 	}
+#endif
 }
 
 #if !defined(CONFIG_USB_MUSB_AM35X) && !defined(CONFIG_USB_MUSB_PIC32)
@@ -270,6 +280,12 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 	dev_dbg(musb->controller, "%cX ep%d fifo %p count %d buf %p\n",
 			'R', hw_ep->epnum, fifo, len, dst);
 
+#if defined(CONFIG_USB_MUSB_MB86H60)
+	while (len--)
+	{
+		*dst++ = musb_readb(musb, fifo, 0);
+	}
+#else
 	/* we can't assume unaligned writes work */
 	if (likely((0x01 & (unsigned long) dst) == 0)) {
 		u16	index = 0;
@@ -296,6 +312,7 @@ void musb_read_fifo(struct musb_hw_ep *hw_ep, u16 len, u8 *dst)
 		/* byte aligned */
 		readsb(fifo, dst, len);
 	}
+#endif
 }
 #endif
 
@@ -328,10 +345,10 @@ void musb_load_testpacket(struct musb *musb)
 {
 	void __iomem	*regs = musb->endpoints[0].regs;
 
-	musb_ep_select(musb->mregs, 0);
+	musb_ep_select(musb, musb->mregs, 0);
 	musb_write_fifo(musb->control_ep,
 			sizeof(musb_test_packet), musb_test_packet);
-	musb_writew(regs, MUSB_CSR0, MUSB_CSR0_TXPKTRDY);
+	musb_writew(musb, regs, MUSB_CSR0, MUSB_CSR0_TXPKTRDY);
 }
 
 #ifndef __UBOOT__
@@ -392,7 +409,7 @@ void musb_hnp_stop(struct musb *musb)
 		MUSB_DEV_MODE(musb);
 		reg = musb_readb(mbase, MUSB_POWER);
 		reg |= MUSB_POWER_SUSPENDM;
-		musb_writeb(mbase, MUSB_POWER, reg);
+		musb_writeb(musb, mbase, MUSB_POWER, reg);
 		/* REVISIT: Start SESSION_REQUEST here? */
 		break;
 	default:
@@ -458,7 +475,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				}
 
 				power &= ~MUSB_POWER_SUSPENDM;
-				musb_writeb(mbase, MUSB_POWER,
+				musb_writeb(musb, mbase, MUSB_POWER,
 						power | MUSB_POWER_RESUME);
 
 				musb->port1_status |=
@@ -533,7 +550,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		 *  - ... to A_WAIT_BCON.
 		 * a_wait_vrise_tmout triggers VBUS_ERROR transitions
 		 */
-		musb_writeb(mbase, MUSB_DEVCTL, MUSB_DEVCTL_SESSION);
+		musb_writeb(musb, mbase, MUSB_DEVCTL, MUSB_DEVCTL_SESSION);
 		musb->ep0_stage = MUSB_EP0_START;
 		musb->xceiv->state = OTG_STATE_A_IDLE;
 		MUSB_HST_MODE(musb);
@@ -577,7 +594,7 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				musb->vbuserr_retry--;
 				ignore = 1;
 				devctl |= MUSB_DEVCTL_SESSION;
-				musb_writeb(mbase, MUSB_DEVCTL, devctl);
+				musb_writeb(musb, mbase, MUSB_DEVCTL, devctl);
 			} else {
 				musb->port1_status |=
 					  USB_PORT_STAT_OVERCURRENT
@@ -683,9 +700,9 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 		if (is_peripheral_active(musb)) {
 			/* REVISIT HNP; just force disconnect */
 		}
-		musb_writew(musb->mregs, MUSB_INTRTXE, musb->epmask);
-		musb_writew(musb->mregs, MUSB_INTRRXE, musb->epmask & 0xfffe);
-		musb_writeb(musb->mregs, MUSB_INTRUSBE, 0xf7);
+		musb_writew(musb, musb->mregs, MUSB_INTRTXE, musb->epmask);
+		musb_writew(musb, musb->mregs, MUSB_INTRRXE, musb->epmask & 0xfffe);
+		musb_writeb(musb, musb->mregs, MUSB_INTRUSBE, 0xf7);
 #ifndef __UBOOT__
 		musb->port1_status &= ~(USB_PORT_STAT_LOW_SPEED
 					|USB_PORT_STAT_HIGH_SPEED
@@ -908,7 +925,7 @@ int musb_start(struct musb *musb)
 #endif
 {
 	void __iomem	*regs = musb->mregs;
-	u8		devctl = musb_readb(regs, MUSB_DEVCTL);
+	u8		devctl = musb_readb(musb, regs, MUSB_DEVCTL);
 #ifdef __UBOOT__
 	int ret;
 #endif
@@ -916,21 +933,21 @@ int musb_start(struct musb *musb)
 	dev_dbg(musb->controller, "<== devctl %02x\n", devctl);
 
 	/*  Set INT enable registers, enable interrupts */
-	musb_writew(regs, MUSB_INTRTXE, musb->epmask);
-	musb_writew(regs, MUSB_INTRRXE, musb->epmask & 0xfffe);
-	musb_writeb(regs, MUSB_INTRUSBE, 0xf7);
+	musb_writew(musb, regs, MUSB_INTRTXE, musb->epmask);
+	musb_writew(musb, regs, MUSB_INTRRXE, musb->epmask & 0xfffe);
+	musb_writeb(musb, regs, MUSB_INTRUSBE, 0xf7);
 
-	musb_writeb(regs, MUSB_TESTMODE, 0);
+	musb_writeb(musb, regs, MUSB_TESTMODE, 0);
 
 	/* put into basic highspeed mode and start session */
-	musb_writeb(regs, MUSB_POWER, MUSB_POWER_ISOUPDATE
+	musb_writeb(musb, regs, MUSB_POWER, MUSB_POWER_ISOUPDATE
 						| MUSB_POWER_HSENAB
 						/* ENSUSPEND wedges tusb */
 						/* | MUSB_POWER_ENSUSPEND */
 						);
 
 	musb->is_active = 0;
-	devctl = musb_readb(regs, MUSB_DEVCTL);
+	devctl = musb_readb(musb, regs, MUSB_DEVCTL);
 	devctl &= ~MUSB_DEVCTL_SESSION;
 
 	if (is_otg_enabled(musb)) {
@@ -964,7 +981,7 @@ int musb_start(struct musb *musb)
 		return ret;
 	}
 #endif
-	musb_writeb(regs, MUSB_DEVCTL, devctl);
+	musb_writeb(musb, regs, MUSB_DEVCTL, devctl);
 
 #ifdef __UBOOT__
 	return 0;
@@ -978,17 +995,17 @@ static void musb_generic_disable(struct musb *musb)
 	u16	temp;
 
 	/* disable interrupts */
-	musb_writeb(mbase, MUSB_INTRUSBE, 0);
-	musb_writew(mbase, MUSB_INTRTXE, 0);
-	musb_writew(mbase, MUSB_INTRRXE, 0);
+	musb_writeb(musb, mbase, MUSB_INTRUSBE, 0);
+	musb_writew(musb, mbase, MUSB_INTRTXE, 0);
+	musb_writew(musb, mbase, MUSB_INTRRXE, 0);
 
 	/* off */
-	musb_writeb(mbase, MUSB_DEVCTL, 0);
+	musb_writeb(musb, mbase, MUSB_DEVCTL, 0);
 
 	/*  flush pending interrupts */
-	temp = musb_readb(mbase, MUSB_INTRUSB);
-	temp = musb_readw(mbase, MUSB_INTRTX);
-	temp = musb_readw(mbase, MUSB_INTRRX);
+	temp = musb_readb(musb, mbase, MUSB_INTRUSB);
+	temp = musb_readw(musb, mbase, MUSB_INTRTX);
+	temp = musb_readw(musb, mbase, MUSB_INTRRX);
 
 }
 
@@ -1213,7 +1230,7 @@ fifo_setup(struct musb *musb, struct musb_hw_ep  *hw_ep,
 	}
 
 	/* configure the FIFO */
-	musb_writeb(mbase, MUSB_INDEX, hw_ep->epnum);
+	musb_writeb(musb, mbase, MUSB_INDEX, hw_ep->epnum);
 
 	/* EP0 reserved endpoint for control, bidirectional;
 	 * EP1 reserved for bulk, two unidirection halves.
@@ -1223,25 +1240,25 @@ fifo_setup(struct musb *musb, struct musb_hw_ep  *hw_ep,
 	/* REVISIT error check:  be sure ep0 can both rx and tx ... */
 	switch (cfg->style) {
 	case FIFO_TX:
-		musb_write_txfifosz(mbase, c_size);
-		musb_write_txfifoadd(mbase, c_off);
+		musb_write_txfifosz(musb, mbase, c_size);
+		musb_write_txfifoadd(musb, mbase, c_off);
 		hw_ep->tx_double_buffered = !!(c_size & MUSB_FIFOSZ_DPB);
 		hw_ep->max_packet_sz_tx = maxpacket;
 		break;
 	case FIFO_RX:
-		musb_write_rxfifosz(mbase, c_size);
-		musb_write_rxfifoadd(mbase, c_off);
+		musb_write_rxfifosz(musb, mbase, c_size);
+		musb_write_rxfifoadd(musb, mbase, c_off);
 		hw_ep->rx_double_buffered = !!(c_size & MUSB_FIFOSZ_DPB);
 		hw_ep->max_packet_sz_rx = maxpacket;
 		break;
 	case FIFO_RXTX:
-		musb_write_txfifosz(mbase, c_size);
-		musb_write_txfifoadd(mbase, c_off);
+		musb_write_txfifosz(musb, mbase, c_size);
+		musb_write_txfifoadd(musb, mbase, c_off);
 		hw_ep->rx_double_buffered = !!(c_size & MUSB_FIFOSZ_DPB);
 		hw_ep->max_packet_sz_rx = maxpacket;
 
-		musb_write_rxfifosz(mbase, c_size);
-		musb_write_rxfifoadd(mbase, c_off);
+		musb_write_rxfifosz(musb, mbase, c_size);
+		musb_write_rxfifoadd(musb, mbase, c_off);
 		hw_ep->tx_double_buffered = hw_ep->rx_double_buffered;
 		hw_ep->max_packet_sz_tx = maxpacket;
 
@@ -1361,7 +1378,7 @@ static int __devinit ep_config_from_hw(struct musb *musb)
 	/* FIXME pick up ep0 maxpacket size */
 
 	for (epnum = 1; epnum < musb->config->num_eps; epnum++) {
-		musb_ep_select(mbase, epnum);
+		musb_ep_select(musb, mbase, epnum);
 		hw_ep = musb->endpoints + epnum;
 
 		ret = musb_read_fifosize(musb, hw_ep, epnum);
@@ -1406,7 +1423,7 @@ static int __devinit musb_core_init(u16 musb_type, struct musb *musb)
 	int		i;
 
 	/* log core options (read using indexed model) */
-	reg = musb_read_configdata(mbase);
+	reg = musb_read_configdata(musb, mbase);
 
 	strcpy(aInfo, (reg & MUSB_CONFIGDATA_UTMIDW) ? "UTMI-16" : "UTMI-8");
 	if (reg & MUSB_CONFIGDATA_DYNFIFO) {
@@ -1454,7 +1471,7 @@ static int __devinit musb_core_init(u16 musb_type, struct musb *musb)
 	}
 
 	/* log release info */
-	musb->hwvers = musb_read_hwvers(mbase);
+	musb->hwvers = musb_read_hwvers(musb, mbase);
 	snprintf(aRevision, 32, "%d.%d%s", MUSB_HWVERS_MAJOR(musb->hwvers),
 		MUSB_HWVERS_MINOR(musb->hwvers),
 		(musb->hwvers & MUSB_HWVERS_RC) ? "RC" : "");
@@ -1566,8 +1583,8 @@ irqreturn_t musb_interrupt(struct musb *musb)
 	int		ep_num;
 	u32		reg;
 
-	devctl = musb_readb(musb->mregs, MUSB_DEVCTL);
-	power = musb_readb(musb->mregs, MUSB_POWER);
+	devctl = musb_readb(musb, musb->mregs, MUSB_DEVCTL);
+	power = musb_readb(musb, musb->mregs, MUSB_POWER);
 
 	dev_dbg(musb->controller, "** IRQ %s usb%04x tx%04x rx%04x\n",
 		(devctl & MUSB_DEVCTL_HM) ? "host" : "peripheral",

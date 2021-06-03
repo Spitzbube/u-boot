@@ -190,24 +190,24 @@ static int _musb_reset_root_port(struct musb_host_data *host,
 	void *mbase = host->host->mregs;
 	u8 power;
 
-	power = musb_readb(mbase, MUSB_POWER);
+	power = musb_readb(host->host, mbase, MUSB_POWER);
 	power &= 0xf0;
-	musb_writeb(mbase, MUSB_POWER, MUSB_POWER_RESET | power);
+	musb_writeb(host->host, mbase, MUSB_POWER, MUSB_POWER_RESET | power);
 	mdelay(50);
 
 	if (host->host->ops->pre_root_reset_end)
 		host->host->ops->pre_root_reset_end(host->host);
 
-	power = musb_readb(mbase, MUSB_POWER);
-	musb_writeb(mbase, MUSB_POWER, ~MUSB_POWER_RESET & power);
+	power = musb_readb(host->host, mbase, MUSB_POWER);
+	musb_writeb(host->host, mbase, MUSB_POWER, ~MUSB_POWER_RESET & power);
 
 	if (host->host->ops->post_root_reset_end)
 		host->host->ops->post_root_reset_end(host->host);
 
 	host->host->isr(0, host->host);
-	host->host_speed = (musb_readb(mbase, MUSB_POWER) & MUSB_POWER_HSMODE) ?
+	host->host_speed = (musb_readb(host->host, mbase, MUSB_POWER) & MUSB_POWER_HSMODE) ?
 			USB_SPEED_HIGH :
-			(musb_readb(mbase, MUSB_DEVCTL) & MUSB_DEVCTL_FSDEV) ?
+			(musb_readb(host->host, mbase, MUSB_DEVCTL) & MUSB_DEVCTL_FSDEV) ?
 			USB_SPEED_FULL : USB_SPEED_LOW;
 	mdelay((host->host_speed == USB_SPEED_LOW) ? 200 : 50);
 
@@ -232,7 +232,7 @@ int musb_lowlevel_init(struct musb_host_data *host)
 
 	mbase = host->host->mregs;
 	do {
-		if (musb_readb(mbase, MUSB_DEVCTL) & MUSB_DEVCTL_HM)
+		if (musb_readb(host->host, mbase, MUSB_DEVCTL) & MUSB_DEVCTL_HM)
 			break;
 	} while (get_timer(0) < timeout);
 	if (get_timer(0) >= timeout) {

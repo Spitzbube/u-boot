@@ -112,6 +112,17 @@
 			reg = <0xd4000000 0x1000>;
 		};
 		
+		dma: dma@c7000000 {
+			compatible = "fujitsu,mb86h60-dma";
+			reg = <0xc7000000 0x800>;
+		};
+					
+		usb0: usb@c7000800 {
+			compatible = "fujitsu,mb86h60-musb";
+			reg = <0xc7000800 0x1000>, <0xc7000014 0x04>;
+			reg-names = "usb-base", "usb-mode";
+		};
+		
 	};
 
 };

@@ -42,15 +42,12 @@ struct musb_ep;
 
 #include "musb_debug.h"
 #include "musb_dma.h"
-
-#include "musb_io.h"
-#include "musb_regs.h"
+#include "musb_host.h"
 
 #include "musb_gadget.h"
 #ifndef __UBOOT__
 #include <linux/usb/hcd.h>
 #endif
-#include "musb_host.h"
 
 #define	is_peripheral_enabled(musb)	((musb)->board_mode != MUSB_HOST)
 #define	is_host_enabled(musb)		((musb)->board_mode != MUSB_PERIPHERAL)
@@ -172,8 +169,8 @@ enum musb_g_ep0_state {
 
 /* "indexed" mapping: INDEX register controls register bank select */
 #else
-#define musb_ep_select(_mbase, _epnum) \
-	musb_writeb((_mbase), MUSB_INDEX, (_epnum))
+#define musb_ep_select(_musb, _mbase, _epnum) \
+	musb_writeb((_musb), (_mbase), MUSB_INDEX, (_epnum))
 #define	MUSB_EP_OFFSET			MUSB_INDEXED_OFFSET
 #endif
 
@@ -225,6 +222,15 @@ struct musb_platform_ops {
 				dma_addr_t *dma_addr, u32 *len);
 	void	(*pre_root_reset_end)(struct musb *musb);
 	void	(*post_root_reset_end)(struct musb *musb);
+
+	u16 (*musb_readw)(struct musb *musb,
+				const void __iomem *addr, unsigned offset);
+	void (*musb_writew)(struct musb *musb,
+				void __iomem *addr, unsigned offset, u16 data);
+	u8 (*musb_readb)(struct musb *musb,
+				const void __iomem *addr, unsigned offset);
+	void (*musb_writeb)(struct musb *musb,
+				void __iomem *addr, unsigned offset, u8 data);
 };
 
 /*
@@ -452,6 +458,9 @@ struct musb {
 #endif
 };
 
+#include "musb_io.h"
+#include "musb_regs.h"
+
 static inline struct musb *gadget_to_musb(struct usb_gadget *g)
 {
 	return container_of(g, struct musb, g);
@@ -464,7 +473,7 @@ static inline int musb_read_fifosize(struct musb *musb,
 	u8 reg = 0;
 
 	/* read from core using indexed model */
-	reg = musb_readb(mbase, MUSB_EP_OFFSET(epnum, MUSB_FIFOSIZE));
+	reg = musb_readb(musb, mbase, MUSB_EP_OFFSET(epnum, MUSB_FIFOSIZE));
 	/* 0's returned when no more endpoints */
 	if (!reg)
 		return -ENODEV;

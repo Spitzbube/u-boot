@@ -6,16 +6,6 @@
 
 #include <linux/sizes.h>
 
-/* Architecture, CPU, etc.*/
-
-/* Use SoC timer for AArch32 */
-#define CONFIG_SYS_TIMER_RATE		1000000
-#if 0
-#define CONFIG_SYS_TIMER_COUNTER	\
-	(&((struct bcm2835_timer_regs *)BCM2835_TIMER_PHYSADDR)->clo)
-
-#endif
-
 /* Memory layout */
 #define CONFIG_SYS_UBOOT_BASE		CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_INIT_SP_ADDR		(0x24000000 - GENERATED_GBL_DATA_SIZE)
