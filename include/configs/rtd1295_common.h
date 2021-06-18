@@ -60,39 +60,6 @@
 
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (256 << 10))
 
-/*
- * Hardware drivers
- */
-
-/*
- * serial port - NS16550 compatible
- */
-#define V_NS16550_CLK				27000000
-
-#define CONFIG_SYS_NS16550
-#define CONFIG_SYS_NS16550_SERIAL
-#define CONFIG_SYS_NS16550_REG_SIZE	(-4)
-#define CONFIG_SYS_NS16550_CLK		V_NS16550_CLK
-#if 0
-#define CONFIG_SYS_NS16550_UART1_CLK    432000000 
-#endif
-
-#define UART1_BASE					0x9801B200
-#define UART0_BASE					0x98007800
-#define CONFIG_CONS_INDEX			1
-#define CONFIG_SYS_NS16550_COM1     UART0_BASE
-#define CONFIG_SYS_NS16550_COM2     UART1_BASE
-
-#define CONFIG_BAUDRATE				115200
-#define CONFIG_SYS_BAUDRATE_TABLE	{4800, 9600, 19200, 38400, 57600, 115200}
-
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
-
-#define UART0   0
-#define UART1   1
-#define UART2   2
-#define UART3   3
-
 #if 0
 
 /* Flash */

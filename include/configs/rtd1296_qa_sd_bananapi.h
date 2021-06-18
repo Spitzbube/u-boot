@@ -118,9 +118,6 @@
 //#define CONFIG_FT_RESCUE
 */
 
-#undef  V_NS16550_CLK
-#define V_NS16550_CLK			27000000	//FIXME
-
 /* Bootcode Feature: bootcmd: load bootcode from SD card */
 #define CONFIG_BOOT_FROM_SD
 #define CONFIG_BOOT_FROM_SD_DTB			"bananapi/bpi-w2/linux/bpi-w2.dtb"

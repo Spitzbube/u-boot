@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) 2021 Thomas Schmidt <spitzbube@mail.bg>
+ */
+
+#include "rtd-1296.dtsi"
+
+/ {
+	model= "Banana Pi BPI-W2 (RTD1296)";
+	compatible = "Realtek,rtd-1296";
+	
+	memory@0 {
+		device_type = "memory";
+		reg = <0 0x80000000>; /* 2048 MB */
+	};
+	
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+};
+
+&uart0 {
+	status = "okay";
+};
+

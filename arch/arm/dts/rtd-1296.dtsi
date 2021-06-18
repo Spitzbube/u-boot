@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) Thomas Schmidt <spitzbube@mail.bg>
+ */
+
+/dts-v1/;
+
+/ {
+	compatible = "realtek,rtd1296";
+
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	uart0: serial0@98007800 {
+		compatible = "snps,dw-apb-uart";
+		/*
+		interrupt-parent = <&mux_intc>;
+		*/
+		reg = <0x98007800 0x400>,
+			<0x98007000 0x100>;
+		/*
+		interrupts-st-mask = <0x4>;
+		interrupts = <1 2>;
+		*/
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		/*
+		clocks = <&iclk_en CLK_EN_MISC_UR0>;
+		*/
+		clock-frequency = <27000000>; /* This value must be override by the board. */
+		status = "disabled";
+	};
+	
+	uart1: serial1@9801B200 {
+		compatible = "snps,dw-apb-uart";
+		/*
+		interrupt-parent = <&mux_intc>;
+		*/
+		reg = <0x9801B200 0x100>,
+			<0x9801B00c 0x100>;
+		/*
+		interrupts-st-mask = <0x8>;
+		interrupts = <0 3>, <0 5>;
+		*/
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		/*
+		clocks = <&clk_en_2 CLK_EN_UR1>;
+		resets = <&rst2 RSTN_UR1>;
+		*/
+		/* This value must be overriden by the board. */
+		clock-frequency = <0>;
+		status = "disabled";
+	};
+
+	uart2: serial2@9801B400 {
+		compatible = "snps,dw-apb-uart";
+		/*
+		interrupt-parent = <&mux_intc>;
+		*/
+		reg = <0x9801B400 0x100>,
+			<0x9801B00c 0x100>;
+		/*
+		interrupts-st-mask = <0x100>;
+		interrupts = <0 8>, <0 13>;
+		*/
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		/*
+		clocks = <&clk_en_2 CLK_EN_UR2>;
+		resets = <&rst2 RSTN_UR2>;
+		*/
+		/* This value must be overriden by the board. */
+		clock-frequency = <0>;
+		status = "disabled";
+	}; 
+	
+};
+

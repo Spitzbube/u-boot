@@ -34,10 +34,18 @@ int print_cpuinfo(void)
 
 int dram_init(void)
 {
-	gd->ram_size = 1024*1024;
+	if (fdtdec_setup_mem_size_base() != 0)
+			return -EINVAL;
 
 	return 0;
 }
+
+#ifdef CONFIG_OF_BOARD
+int dram_init_banksize(void)
+{
+	return fdtdec_setup_memory_banksize();
+}
+#endif
 
 int board_init(void)
 {
