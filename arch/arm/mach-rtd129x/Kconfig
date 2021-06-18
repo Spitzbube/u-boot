@@ -1,0 +1,20 @@
+menu "Realtek RTD129X"
+	depends on ARCH_RTD129X
+
+choice
+	prompt "RealTek RTD129X platform select"
+	optional
+
+config TARGET_RTD1295
+	bool "Support RealTek 1295 platform"
+
+config TARGET_RTD1296
+	bool "Support RealTek 1296 platform"
+	depends on TARGET_RTD1295
+
+endchoice
+
+config SYS_CONFIG_NAME
+	default "rtd1296_qa_sd_bananapi"
+
+endmenu

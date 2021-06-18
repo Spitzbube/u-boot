@@ -906,6 +906,10 @@ config ARCH_QEMU
 	imply DM_RTC
 	imply RTC_PL031
 
+config ARCH_RTD129X
+	bool "Realtek RTD129X"
+	select ARM64
+
 config ARCH_RMOBILE
 	bool "Renesas ARM SoCs"
 	select DM
@@ -1870,6 +1874,8 @@ source "arch/arm/mach-orion5x/Kconfig"
 source "arch/arm/mach-owl/Kconfig"
 
 source "arch/arm/mach-rmobile/Kconfig"
+
+source "arch/arm/mach-rtd129x/Kconfig"
 
 source "arch/arm/mach-meson/Kconfig"
 
