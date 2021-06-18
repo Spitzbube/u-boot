@@ -21,6 +21,11 @@
 		reg = <0x40000000 0x04000000>;
 	};
 
+	memory@02002000 {
+		device_type = "memory";
+		reg = <0x02002000 0x2000>;
+	};
+
 	aliases {
 		serial0 = &uart0;
 	};
@@ -28,5 +33,14 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
- 
+
 };
+
+&uart0 {
+	u-boot,dm-spl;
+};
+
+&pinctrl_uart0 {
+	u-boot,dm-spl;
+};
+

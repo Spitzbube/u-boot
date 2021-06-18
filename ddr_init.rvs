@@ -1,0 +1,212 @@
+################################################################################
+#
+# Register/Value setup file
+#
+# This file contains register/value settings to be written into
+# the boot flash header
+#
+# Lines will be parsed for leading "setup:" or "delay:" strings, all other
+# entries will be skipped.
+# Lines beginning with '#' will be treated as comment lines and will be
+# skipped also.
+#
+# Format:
+#   "# comment line"
+#   "setup: <register> = <value>"
+#   "delay: <usec_value>"
+#
+# Where:
+#   <register> and <value> items must be given in hex
+#   <usec_value> can be given either in dec or hex
+#
+################################################################################
+
+################################################################################
+# Memory settings for the RAMIF-S interface
+# (64 MBytes, 0x20000000..0x24000000)
+################################################################################
+
+setup: 0xDD000100 = 0x00000001 # RAMIF_S_SDRAM_TYPE
+setup: 0xDD000104 = 0x00004085 # RAMIF_S_AC_SPEC_1
+setup: 0xDD000108 = 0x00003554 # RAMIF_S_AC_SPEC_2
+setup: 0xDD00010C = 0x00000043 # RAMIF_S_AC_SPEC_3
+setup: 0xDD000110 = 0x00000f23 # RAMIF_S_AC_SPEC_4
+setup: 0xDD000114 = 0x00000980 # RAMIF_S_AC_SPEC_5
+setup: 0xDD000118 = 0x000000d3 # RAMIF_S_DATA_DELAY
+setup: 0xDD000200 = 0x00000005 # RAMIF_S_ODT_MODE
+setup: 0xDD000204 = 0x000000f0 # RAMIF_S_ODT_DELAY1
+setup: 0xDD000208 = 0x000000af # RAMIF_S_ODT_DELAY2
+setup: 0xDD00020C = 0x00000059 # RAMIF_S_ODT_DELAY3
+setup: 0xDD000210 = 0x0000004b # RAMIF_S_ODT_DELAY4
+setup: 0xDD000300 = 0x00000001 # RAMIF_S_PIRLO_MODE
+setup: 0xDD000304 = 0x00000000 # RAMIF_S_PIRLO_RID
+setup: 0xDD000308 = 0x00000000 # RAMIF_S_PIRLO_WID
+setup: 0xDD000504 = 0x00000266 # RAMIF_S_DLL_SET
+setup: 0xDD000508 = 0x0000006a # RAMIF_S_OCD_SET
+setup: 0xDD000510 = 0x00000008 # RAMIF_S_ODT_SET
+setup: 0xDD000514 = 0x0000018e # RAMIF_S_IO_CONT_SET
+setup: 0xDD000500 = 0x00000001 # RAMIF_S_MACRO_RST
+delay: 1                       #
+setup: 0xDD000500 = 0x00000003 # RAMIF_S_MACRO_RST
+delay: 200                     #
+setup: 0xDD000500 = 0x00000007 # RAMIF_S_MACRO_RST
+delay: 200                     #
+setup: 0xDD000604 = 0x0000001f # RAMIF_S_SDRAM_DEF
+setup: 0xDD000600 = 0x0000001f # RAMIF_S_SDRAM_CMD
+delay: 400                     #
+setup: 0xDD000600 = 0x00000017 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00000400 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000012 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00004000 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00006000 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00002024 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00000952 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00000400 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000012 # RAMIF_S_SDRAM_CMD
+setup: 0xDD000600 = 0x00000011 # RAMIF_S_SDRAM_CMD
+delay: 1                       #
+setup: 0xDD000600 = 0x00000011 # RAMIF_S_SDRAM_CMD
+delay: 1                       #
+setup: 0xDD00060C = 0x00000852 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x000023a4 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00002024 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000010 # RAMIF_S_SDRAM_CMD
+setup: 0xDD00060C = 0x00000000 # RAMIF_S_SDRAM_ADR
+setup: 0xDD000600 = 0x00000017 # RAMIF_S_SDRAM_CMD
+setup: 0xDD000008 = 0x00000001 # RAMIF_S_ENABLE
+
+################################################################################
+# Memory settings for the RAMIF-V interface
+# (64 MBytes, 0x40000000..0x44000000)
+################################################################################
+
+setup: 0xDE000100 = 0x00000001 # RAMIF_V_SDRAM_TYPE
+setup: 0xDE000104 = 0x00003554 # RAMIF_V_AC_SPEC_2
+setup: 0xDE000108 = 0x00000069 # RAMIF_V_AC_SPEC_3
+setup: 0xDE00010C = 0x00000f23 # RAMIF_V_AC_SPEC_4
+setup: 0xDE000110 = 0x00000980 # RAMIF_V_AC_SPEC_5
+setup: 0xDE000114 = 0x00000000 # RAMIF_V_DATA_DELAY
+setup: 0xDE000200 = 0x00000005 # RAMIF_V_ODT_MODE
+setup: 0xDE000204 = 0x000000af # RAMIF_V_ODT_DELAY1
+setup: 0xDE000208 = 0x0000009e # RAMIF_V_ODT_DELAY2
+setup: 0xDE00020C = 0x00000048 # RAMIF_V_ODT_DELAY3
+setup: 0xDE000210 = 0x0000000a # RAMIF_V_ODT_DELAY4
+setup: 0xDE000504 = 0x00000266 # RAMIF_V_DLL_SET
+setup: 0xDE000508 = 0x0000006a # RAMIF_V_OCD_SET
+setup: 0xDE000514 = 0x0000018e # RAMIF_V_IO_CONT_SET
+setup: 0xDE000500 = 0x00000001 # RAMIF_V_MACRO_RST
+delay: 1                       #
+setup: 0xDE000500 = 0x00000003 # RAMIF_V_MACRO_RST
+delay: 200                     #
+setup: 0xDE000500 = 0x00000007 # RAMIF_V_MACRO_RST
+delay: 200                     #
+setup: 0xDE000604 = 0x0000001f # RAMIF_V_SDRAM_DEF
+setup: 0xDE000600 = 0x0000001f # RAMIF_V_SDRAM_CMD
+delay: 400                     #
+setup: 0xDE000600 = 0x00000017 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00000400 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000012 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00006000 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00004000 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00002024 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00000952 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00000400 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000012 # RAMIF_V_SDRAM_CMD
+setup: 0xDE000600 = 0x00000011 # RAMIF_V_SDRAM_CMD
+delay: 1                       #
+setup: 0xDE000600 = 0x00000011 # RAMIF_V_SDRAM_CMD
+delay: 1                       #
+setup: 0xDE00060C = 0x00000852 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x000023a4 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00002024 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000010 # RAMIF_V_SDRAM_CMD
+setup: 0xDE00060C = 0x00000000 # RAMIF_V_SDRAM_ADR
+setup: 0xDE000600 = 0x00000017 # RAMIF_V_SDRAM_CMD
+setup: 0xDE000008 = 0x00000001 # RAMIF_V_ENABLE
+
+################################################################################
+# Switch ARM from 324 MHz to 162 MHz
+# (the hard way, with ARM core reset)
+################################################################################
+
+# setup: 0xCF000310 = 0x00000010 # request ARM halt
+# delay: 10000                   # wait 10000 usecs for HALT
+# setup: 0xCA000070 = 0x0000007f # reset ARM clocks
+# delay: 10                      # wait 10 usecs
+# setup: 0xCF000310 = 0x00000020 # set ARM request to POLLING
+# delay: 10                      # wait 10 usecs
+# setup: 0xCA000070 = 0x000f00ff # reset ARM
+
+################################################################################
+# Switch ARM from 324 MHz to 162 MHz
+# (the easy way, just switch down the ARM core frequency)
+################################################################################
+
+# setup: 0xca000070 = 0x000f00ff # set default value 0x000f007f plus bit 7
+# delay: 10
+
+################################################################################
+# AXI bus scheduler specific settings
+################################################################################
+
+setup: 0xDC000000 = 0x00007fff
+setup: 0xDC000004 = 0x00000003
+setup: 0xDC000008 = 0x0000000a
+setup: 0xDC00000C = 0x0000000a
+setup: 0xDC000010 = 0x0000000a
+setup: 0xDC000014 = 0x0000000a
+setup: 0xDC000018 = 0x0000000a
+setup: 0xDC00001C = 0x0000000a
+setup: 0xDC000020 = 0x0000000a
+setup: 0xDC000024 = 0x0000000a
+setup: 0xDC000028 = 0x0000000a
+setup: 0xDC00002C = 0x0000000a
+setup: 0xDC000030 = 0x0000000a
+setup: 0xDC000034 = 0x0000000a
+setup: 0xDC000038 = 0x0000000a
+setup: 0xDC00003C = 0x0000000a
+setup: 0xDC000040 = 0x0000000a
+setup: 0xDC000044 = 0x0000000a
+setup: 0xDC000048 = 0x0000000b
+setup: 0xDC00004C = 0x0000000a
+setup: 0xDC000050 = 0x00000000
+setup: 0xDC000054 = 0x00000000
+
+################################################################################
+# ROM boot loader specific data structure in internal SDRAM
+#
+# This information will be used by the driver "drv_boot" to find out whether
+# the firmware files are embedded in the application or seperately stored
+# in flash memory. The values defined are taken from "drv_boot.h"
+#
+# Boot modes:     (value at 0x0200010C)
+# - 0x00000000  = Unknown boot mode
+# - 0x00000001  = Application exectured via debug/jtag port
+#                   (requires firmware mode=0x00000001)
+# - 0x00000002  = Application booted by "ROM Bootloader"
+# - 0x00000003  = Application booted by "booter"
+#
+# Boot devices:   (value at 0x020001110)
+# - 0x00000000  = Unknown boot device
+# - 0x00000001  = The parallel flash device
+# - 0x00000002  = The serial flash device
+################################################################################
+
+setup: 0x0200010C = 0x00000001
+setup: 0x02000110 = 0x00000000
+
+################################################################################
+# End of file
+################################################################################

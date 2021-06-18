@@ -619,6 +619,9 @@ config TARGET_FLEA3
 config ARCH_MB86H6X
 	bool "Fujitsu MB86H6X family"
 	select DM
+	select DM_SERIAL
+	select PL01X_SERIAL
+	select SUPPORT_SPL
 
 config ARCH_BCM283X
 	bool "Broadcom BCM283X family"

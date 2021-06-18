@@ -16,6 +16,7 @@
 		#size-cells = <1>;
 
 		gpio: gpio@c3000000 {
+			u-boot,dm-spl;
 			compatible = "fujitsu,mb86h60-gpio";
 			reg = <0xc3000000 0x1000>;
 			pinctrl_uart0: gpio_uart0 {
@@ -45,6 +46,7 @@
 		};
 
 		uart0: serial@c2000000 {
+			u-boot,dm-spl;
 			compatible = "arm,pl011";
 			reg = <0xc2000000 0x1000>;
 			clock = <81000000>;
@@ -58,6 +60,7 @@
 			clock = <81000000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_uart1>;
+			status = "disabled";
 		}; 
 
 		spiflash: spiflash@c0000000 {
@@ -110,6 +113,7 @@
 		ssp1: ssp@d4000000 {
 			compatible = "arm,pl022-spi";
 			reg = <0xd4000000 0x1000>;
+			status = "disabled";
 		};
 		
 		dma: dma@c7000000 {

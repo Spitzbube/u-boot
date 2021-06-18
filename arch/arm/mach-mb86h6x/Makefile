@@ -4,4 +4,5 @@
 
 obj-y += lowlevel_init.o
 obj-y	+= reset.o timer.o
-#obj-y	+= init.o reset.o mbox.o msg.o phys2bus.o 
+#obj-y	+= init.o reset.o mbox.o msg.o phys2bus.o
+obj-$(CONFIG_SPL_BUILD)	+= spl.o
