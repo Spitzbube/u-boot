@@ -184,7 +184,7 @@
 
 /* Use General purpose timer 2 */
 #define CONFIG_SYS_TIMER		0     //FPGA
-#define CONFIG_SYS_HZ			1000
+//#define CONFIG_SYS_HZ			1000
 
 /*
  * Stack sizes

@@ -512,6 +512,8 @@ static int mmc_go_idle(struct mmc *mmc)
 
 	udelay(1000);
 
+	printf("mmc_go_idle\n");
+
 	cmd.cmdidx = MMC_CMD_GO_IDLE_STATE;
 	cmd.cmdarg = 0;
 	cmd.resp_type = MMC_RSP_NONE;

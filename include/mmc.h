@@ -410,6 +410,11 @@ struct mmc_cmd {
 	uint resp_type;
 	uint cmdarg;
 	uint response[4];
+	//new
+	u32 opcode;
+	u32 arg;
+	u32	resp[4];
+	u32 flags;
 };
 
 struct mmc_data {
@@ -420,6 +425,12 @@ struct mmc_data {
 	uint flags;
 	uint blocks;
 	uint blocksize;
+#ifdef CONFIG_RTK_SD_DRIVER
+	unsigned int bytes_xfered;
+	unsigned int sg_len; /* size of scatter list */
+	unsigned int buf_len;
+	unsigned long dma_addr;
+#endif /* CONFIG_RTK_SD_DRIVER */
 };
 
 /* forward decl. */
@@ -997,5 +1008,45 @@ static inline enum dma_data_direction mmc_get_dma_dir(struct mmc_data *data)
 {
 	return data->flags & MMC_DATA_WRITE ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
 }
+
+/**
+ * rtk sdmmc driver
+ */
+
+#if 0
+void board_sd_power_init(void);
+int board_sd_init(bd_t *bis);
+int cpu_sd_init(bd_t *bis);
+int sd_get_env_addr(struct mmc *mmc, int copy, u32 *env_addr);
+
+#ifdef CONFIG_RTK_SD_DRIVER
+
+  int sd_initialize(bd_t *bis);
+  int sd_register(struct mmc *mmc);
+  int sd_init(struct mmc *mmc);
+  struct mmc *find_sd_device(void);
+#endif /* CONFIG_RTK_SD_DRIVER */
+#endif
+
+#ifdef CONFIG_SD30
+
+  #define MMC_SIGNAL_VOLTAGE_330 0
+  #define MMC_SIGNAL_VOLTAGE_180 1
+
+  #define SD_SWITCH_VOLTAGE 11
+  #define MMC_SEND_TUNING_BLOCK 19
+
+  #define SD_ROCR_S18A (1<<24)
+
+  #define UHS_SDR50_BUS_SPEED 2
+  #define UHS_SDR104_BUS_SPEED 3
+
+  #define MMC_CAP_UHS_SDR50 (1 << 17) /* Host supports UHS SDR50 mode */
+  #define MMC_CAP_UHS_SDR104 (1 << 18) /* Host supports UHS SDR104 mode */
+
+  #define SD_MODE_UHS_SDR104 (1 << 3)
+  #define SD_MODE_UHS_SDR50 (1 << 2)
+
+#endif /* CONFIG_SD30 */
 
 #endif /* _MMC_H_ */

@@ -809,6 +809,11 @@ config FSL_USDHC
 	help
 	  This enables the Ultra Secured Digital Host Controller enhancements
 
+config RTK_SD_DRIVER
+	bool "open and build the RTK_SD"
+	help
+	  Support for the build the RTK SD
+
 endmenu
 
 config SYS_FSL_ERRATUM_ESDHC111

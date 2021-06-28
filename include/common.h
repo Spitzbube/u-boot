@@ -27,6 +27,22 @@
 #include <vsprintf.h>
 #endif	/* __ASSEMBLY__ */
 
+//*********************************************************
+static unsigned int alloc_ptr = 0x200000;
+
+static inline uchar* alloc_outside_buffer(unsigned int length){
+	unsigned int ptr = alloc_ptr;
+	alloc_ptr += length;
+	return (uchar*)(uintptr_t)ptr;
+}
+
+#define MY_ALLOC_CACHE_ALIGN_BUFFER(type, name, size)	type* name = (type*)alloc_outside_buffer(ROUND(size * sizeof(type), ARCH_DMA_MINALIGN));
+
+static inline void MY_CLR_ALIGN_BUFFER(void){
+	alloc_ptr = 0x200000;
+}
+//*********************************************************
+
 /* Pull in stuff for the build system */
 #ifdef DO_DEPS_ONLY
 # include <env_internal.h>

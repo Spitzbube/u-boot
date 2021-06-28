@@ -14,7 +14,15 @@ config TARGET_RTD1296
 
 endchoice
 
+config SYS_VENDOR
+	default "realtek"
+	
+config SYS_SOC
+	default "rtd1295"
+	
 config SYS_CONFIG_NAME
 	default "rtd1296_qa_sd_bananapi"
+
+source "board/realtek/Kconfig"
 
 endmenu

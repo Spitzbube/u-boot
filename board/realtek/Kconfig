@@ -1,0 +1,4 @@
+
+config SYS_BOARD
+	default "1295_qa" if TARGET_RTD1295
+

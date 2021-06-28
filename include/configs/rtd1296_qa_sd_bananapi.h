@@ -13,6 +13,8 @@
  */
 #include <configs/rtd1295_common.h>
 
+#define DEBUG
+
 #if 0
 
 #include <configs/rtd1295_customized_feature.h>
@@ -154,6 +156,12 @@
 	#define CONFIG_SHA256
 	#define CONFIG_CMD_RPMB
 #endif
+
+#endif
+
+	#define CONFIG_SD30
+
+#if 0
 
 /* SD */
 #ifdef CONFIG_RTK_SD_DRIVER
