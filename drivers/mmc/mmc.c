@@ -1277,17 +1277,105 @@ static int sd_switch(struct mmc *mmc, int mode, int group, u8 value, u8 *resp)
 	return mmc_send_cmd(mmc, &cmd, &data);
 }
 
+int sd_app_send_status(struct mmc *mmc, int timeout)
+{
+        struct mmc_cmd cmd;
+
+        //======Add this DMA ======
+	MY_CLR_ALIGN_BUFFER();
+        MY_ALLOC_CACHE_ALIGN_BUFFER(uint, Status, 2);
+        struct mmc_data data;
+        //==========================
+
+        int err, retries = 5;
+
+#ifdef CONFIG_MMC_TRACE
+        int status;
+#endif
+        //=========cmd 55 ========
+         if (mmc_host_is_spi(mmc))
+                return 0;
+
+        // Read the SCR to find out if this card supports higher speeds
+        cmd.opcode = MMC_CMD_APP_CMD;
+        cmd.resp_type = MMC_RSP_R1;
+        cmd.arg = mmc->rca << 16;
+        cmd.flags = 0x95;
+        err = mmc_send_cmd(mmc, &cmd, NULL);
+        if (err)
+                return err;
+        //=============================================
+
+        cmd.opcode = MMC_CMD_SEND_STATUS;	//acmd13
+        cmd.resp_type = MMC_RSP_R1;
+        if (!mmc_host_is_spi(mmc))
+                cmd.arg = mmc->rca << 16;
+        cmd.arg =0;     //fit the same behavior with linux SD card driver
+        //cmd.flags = 0;
+        cmd.flags = 0x1b5;
+
+        //=======ADD this part=============
+        data.dest = (char *)Status;
+        data.blocksize = 64;
+        data.blocks = 1;
+        data.flags = MMC_DATA_READ;
+        //=================================
+		do {
+                err = mmc_send_cmd(mmc, &cmd, &data);     //Acmd 13 is stream cmd
+                if (!err) {
+#if 0
+                        if ((cmd.resp[0] & MMC_STATUS_RDY_FOR_DATA) &&
+                            R1_CURRENT_STATE(cmd.resp[0]) != R1_STATE_PRG)
+                                break;
+                        else if (cmd.resp[0] & MMC_STATUS_MASK) {
+                                printf("Status Error: 0x%08X\n",
+                                        cmd.resp[0]);
+                                return COMM_ERR;
+                        }
+#else
+                        break;
+#endif
+                } else if (--retries < 0) {
+                        printf("error: retries<0\n");
+                        return err;
+                }
+
+                udelay(1000);
+
+        } while (timeout--);
+
+#ifdef CONFIG_MMC_TRACE
+        status = (cmd.resp[0] & MMC_STATUS_CURR_STATE) >> 9;
+        printf("CURR STATE:%d\n", status);
+#endif
+        if (!timeout) {
+                printf("Timeout waiting card ready\n");
+                return -5; //TIMEOUT;
+        }
+
+        return 0;
+}
+
+
 static int sd_get_capabilities(struct mmc *mmc)
 {
 	int err;
 	struct mmc_cmd cmd;
+#if 0
 	ALLOC_CACHE_ALIGN_BUFFER(__be32, scr, 2);
 	ALLOC_CACHE_ALIGN_BUFFER(__be32, switch_status, 16);
+#else
+	MY_CLR_ALIGN_BUFFER();
+    MY_ALLOC_CACHE_ALIGN_BUFFER(uint, scr, 2);
+    MY_ALLOC_CACHE_ALIGN_BUFFER(uint, switch_status, 16);
+#endif
 	struct mmc_data data;
 	int timeout;
 #if CONFIG_IS_ENABLED(MMC_UHS_SUPPORT)
 	u32 sd3_bus_mode;
 #endif
+
+//	printf("sd_get_capabilities: &data = 0x%x\n", &data);
 
 	mmc->card_caps = MMC_MODE_1BIT | MMC_CAP(MMC_LEGACY);
 
@@ -1321,6 +1409,8 @@ static int sd_get_capabilities(struct mmc *mmc)
 	mmc->scr[0] = __be32_to_cpu(scr[0]);
 	mmc->scr[1] = __be32_to_cpu(scr[1]);
 
+    printf("mmc->scr[0]=%x,mmc->scr[1]=%x\n", mmc->scr[0], mmc->scr[1]);
+
 	switch ((mmc->scr[0] >> 24) & 0xf) {
 	case 0:
 		mmc->version = SD_VERSION_1_0;
@@ -1340,6 +1430,11 @@ static int sd_get_capabilities(struct mmc *mmc)
 
 	if (mmc->scr[0] & SD_DATA_4BIT)
 		mmc->card_caps |= MMC_MODE_4BIT;
+
+#if 0 //STC2HI
+    // Waiting for the ready status, ACMD13 to fit the SD card cmd procedure
+    err = sd_app_send_status(mmc, timeout);
+#endif
 
 	/* Version 1.0 doesn't support switching */
 	if (mmc->version == SD_VERSION_1_0)
@@ -1386,8 +1481,12 @@ static int sd_get_capabilities(struct mmc *mmc)
 static int sd_set_card_speed(struct mmc *mmc, enum bus_mode mode)
 {
 	int err;
-
+#if 0
 	ALLOC_CACHE_ALIGN_BUFFER(uint, switch_status, 16);
+#else
+	MY_CLR_ALIGN_BUFFER();
+	MY_ALLOC_CACHE_ALIGN_BUFFER(uint, switch_status, 16);
+#endif
 	int speed;
 
 	/* SD version 1.00 and 1.01 does not support CMD 6 */
@@ -1427,7 +1526,10 @@ static int sd_set_card_speed(struct mmc *mmc, enum bus_mode mode)
 		return err;
 
 	if (((__be32_to_cpu(switch_status[4]) >> 24) & 0xF) != speed)
+	{
+		printf("sd_set_card_speed: speed=%d Not supported\n", speed);
 		return -ENOTSUPP;
+	}
 
 	return 0;
 }
@@ -1475,7 +1577,12 @@ static int sd_read_ssr(struct mmc *mmc)
 	};
 	int err, i;
 	struct mmc_cmd cmd;
+#if 0
 	ALLOC_CACHE_ALIGN_BUFFER(uint, ssr, 16);
+#else
+	MY_CLR_ALIGN_BUFFER();
+	MY_ALLOC_CACHE_ALIGN_BUFFER(uint, ssr, 16);
+#endif
 	struct mmc_data data;
 	unsigned int au, eo, et, es;
 
@@ -1769,7 +1876,7 @@ static int sd_select_mode_and_width(struct mmc *mmc, uint card_caps)
 
 		for (w = widths; w < widths + ARRAY_SIZE(widths); w++) {
 			if (*w & caps & mwt->widths) {
-				pr_debug("trying mode %s width %d (at %d MHz)\n",
+				printf/*pr_debug*/("trying mode %s width %d (at %d MHz)\n",
 					 mmc_mode_name(mwt->mode),
 					 bus_width(*w),
 					 mmc_mode2freq(mmc, mwt->mode) / 1000000);
@@ -2242,7 +2349,10 @@ static int mmc_startup_v4(struct mmc *mmc)
 	ALLOC_CACHE_ALIGN_BUFFER(u8, ext_csd, MMC_MAX_BLOCK_LEN);
 
 	if (IS_SD(mmc) || (mmc->version < MMC_VERSION_4))
+	{
+		printf("mmc->version=0x%x\n", mmc->version);
 		return 0;
+	}
 
 	/* check  ext_csd version and capacity */
 	err = mmc_send_ext_csd(mmc, ext_csd);
@@ -2561,6 +2671,8 @@ static int mmc_startup(struct mmc *mmc)
 			return err;
 	}
 
+	printf("mmc_startup(1)\n");
+
 	/*
 	 * For SD, its erase group is always one sector
 	 */
@@ -2576,6 +2688,8 @@ static int mmc_startup(struct mmc *mmc)
 	err = mmc_set_capacity(mmc, mmc_get_blk_desc(mmc)->hwpart);
 	if (err)
 		return err;
+
+    rtksdmmc_set_clock();
 
 #if CONFIG_IS_ENABLED(MMC_TINY)
 	mmc_set_clock(mmc, mmc->legacy_speed, false);

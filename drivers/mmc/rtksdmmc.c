@@ -8,6 +8,8 @@
 
 #define mdelay(t) udelay((t)*1000)
 
+
+
 // Card Reader Register Sets
 #define BYTE_CNT                      0x0200
 
@@ -15,23 +17,26 @@
 
 #define CR_CARD_STOP                  (0x0103)
 #define CARD_CLOCK_EN_CTL             (0x0129)
-#define CR_PLL_SD1                    (0x01E0)
+#define CARD_SD_CLK_PAD_DRIVE         (0x0130) //0x98010530
+#define CARD_SD_CMD_PAD_DRIVE         (0x0131) //0x98010531
+#define CARD_SD_DAT_PAD_DRIVE         (0x0132) //0x98010532
+#define CR_PLL_SD1                    (0x01E0) //0x980001e0
 #define CR_PLL_SD2                    (0x01E4)
 #define CR_PLL_SD3                    (0x01E8)
 #define CR_PLL_SD4                    (0x01EC)
-#define CR_SD_ISR                     (0x0024)
-#define CR_SD_ISREN                   (0x0028)
-#define CR_SD_PAD_CTL                 (0x0074)
-#define CR_SD_CKGEN_CTL               (0x0078)
-#define SD_CONFIGURE1                 (0x0180)
-#define CARD_SELECT                   (0x010E)
-#define CARD_EXIST                    (0x011F)
-#define SD_CONFIGURE2                 (0x0181)
-#define SD_CONFIGURE3                 (0x0182)
+#define CR_SD_ISR                     (0x0024) //0x98010424
+#define CR_SD_ISREN                   (0x0028) //0x98010428
+#define CR_SD_PAD_CTL                 (0x0074) //0x98010474
+#define CR_SD_CKGEN_CTL               (0x0078) //0x98010478
+#define CARD_SELECT                   (0x010E) //0x9801050e
+#define CARD_EXIST                    (0x011F) //0x9801051F
+#define SD_CONFIGURE1                 (0x0180) //0x98010580
+#define SD_CONFIGURE2                 (0x0181) //0x98010581
+#define SD_CONFIGURE3                 (0x0182) //0x98010582
 #define SD_STATUS1                    (0x0183)
-#define SD_STATUS2                    (0x0184)
-#define SD_BUS_STATUS                 (0x0185)
-#define SD_CMD0                       (0x0189)
+#define SD_STATUS2                    (0x0184) //0x98010584
+#define SD_BUS_STATUS                 (0x0185) //0x98010585
+#define SD_CMD0                       (0x0189) //0x98010589
 #define SD_CMD1                       (0x018A)
 #define SD_CMD2                       (0x018B)
 #define SD_CMD3                       (0x018C)
@@ -57,6 +62,20 @@
 #define SDCLK_DIV_256                 (0x01 << 6)
 #define NO_RST_RDWR_FIFO              (0x00)
 #define RST_RDWR_FIFO                 (0x01 << 4)
+
+#define SPEED_HIGH                    (0x01 << 4)
+#define SPEED_NORM                    (0x00)
+#define DELAY_PHA_MASK                (0x03 << 2)
+#define DELAY_PHA_NORM                (0x01 << 3)
+#define DELAY_PHA_HIGH                (0x01 << 2)
+#define SD30_ASYNC_FIFO_RST           (0x01 << 4)
+#define ACCESS_MODE_SD20              (0x00)
+#define ACCESS_MODE_DDR               (0x01)
+#define ACCESS_MODE_SD30              (0x02)
+#define MODE_SEL_MASK                 (0x03 << 2)
+#define MODE_SEL_SD20                 (ACCESS_MODE_SD20 << 2)
+#define MODE_SEL_DDR                  (ACCESS_MODE_DDR << 2)
+#define MODE_SEL_SD30                 (ACCESS_MODE_SD30 << 2)
 
 /* SD_CONFIGURE2 */
 #define CRC7_CAL_DIS                  (0x01 << 7)
@@ -116,7 +135,8 @@
 #define CR_SD_ISREN                   (0x0028)
 #define CR_SD_PAD_CTL                 (0x0074)
 #define CR_SD_CKGEN_CTL               (0x0078)
-#define CR_SD_INT_EN                  (0x0120)
+#define CR_SD_INT_EN                  (0x0120) //0x98010520
+#define CR_CARD_OE                    (0x0104)
 
 /* SD_TRANSFER */
 #define START_EN                      (0x01 << 7)
@@ -148,6 +168,7 @@ enum sdmmc_clock_speed {
     SDMMC_CLOCK_100000KHZ = 7,
 };
 
+
 struct rtk_sdmmc_plat {
 	struct mmc_config cfg;
 	struct mmc mmc;
@@ -160,6 +181,8 @@ struct rtk_sdmmc_host {
     u32 emmc_base;
     u8 cmd_opcode;
 };
+
+#if 1
 
 struct sdmmc_cmd_pkt {
     struct mmc_host *mmc; /* MMC structure */
@@ -212,8 +235,8 @@ static const unsigned char rtk_sdmmc_cmdcode[60][2] = {
 #include "rtksdmmc.h"
 
 static struct mmc *sd_mmc = NULL;
-static struct rtk_sdmmc_host *sd_rtk_sdmmc_host = NULL;
 #endif
+static struct rtk_sdmmc_host *sd_rtk_sdmmc_host = NULL;
 
 static u8 g_cmd[6];
 #define SD_ALLOC_LENGTH    2048
@@ -864,19 +887,26 @@ int rtk_sdmmc_cpu_wait(struct rtk_sdmmc_host *rtk_host, u8 cmdcode){
 
     u8 sd_status2;
     u8 sd_transfer;
+    u8 dma_status;
 
     sync();
 
+//	sync_75fc();
+
     writeb((u8)(cmdcode | START_EN), sdmmc_base + SD_TRANSFER);
+//	*((volatile char*)0x98010593/*SD_TRANSFER*/) = 0x88;
+
 	start = get_timer(0);
 
-	printf("start=%d\n", start);
+//	printf("start=%d, sdmmc_base=0x%x\n", start, sdmmc_base);
 
     while(1){
 
     	sync();
 
-#if 1
+//    	sync_75fc();
+
+#if 0
 		printf("%s(%d) trans error(error status) :\n opcode=%d trans: 0x%08x, st1: 0x%08x, st2: 0x%08x, bus: 0x%08x\n",
 			__func__,
 			__LINE__,
@@ -886,7 +916,19 @@ int rtk_sdmmc_cpu_wait(struct rtk_sdmmc_host *rtk_host, u8 cmdcode){
 			readb(sdmmc_base + SD_STATUS2),
 			readb(sdmmc_base + SD_BUS_STATUS));
 
+		prints("Trans 0x"); print_hex(*((volatile char*)0x98010593)); prints("\n");
+		prints("St1 0x"); print_hex(*((volatile char*)0x98010583)); prints("\n");
+		prints("St2 0x"); print_hex(*((volatile char*)0x98010584)); prints("\n");
+		prints("Bus 0x"); print_hex(*((volatile char*)0x98010585)); prints("\n");
+
+#if 0
 		printf("0x98010424: 0x%x\n", readb(0x98010424));
+		if ((readb(0x98010424) & 2) == 2)
+		{
+			break;
+		}
+#endif
+
 #endif
 
     	sd_status2 = readb(sdmmc_base + SD_STATUS2);
@@ -897,13 +939,23 @@ int rtk_sdmmc_cpu_wait(struct rtk_sdmmc_host *rtk_host, u8 cmdcode){
             return -1; //COMM_ERR;
         }
 
-    	sd_transfer = readb(sdmmc_base + SD_TRANSFER);
+#if 0
+    	dma_status = readb(0x9801040c);
+    	printf("dma_status=0x%02x\n", dma_status);
+#endif
 
-//    	printf("sd_transfer=0x%02x\n", sd_transfer);
+    	sd_transfer = readb(sdmmc_base + SD_TRANSFER);
+    	printf("sd_transfer=0x%02x\n", sd_transfer);
 
         if((sd_transfer & (END_STATE | IDLE_STATE)) == (END_STATE | IDLE_STATE)){
             break;
         }
+
+#if 0
+        if((sd_transfer & (IDLE_STATE)) == (IDLE_STATE)){
+            break;
+        }
+#endif
 
         sd_transfer = readb(sdmmc_base + SD_TRANSFER);
 
@@ -931,7 +983,7 @@ int rtk_sdmmc_cpu_wait(struct rtk_sdmmc_host *rtk_host, u8 cmdcode){
         }
 		tick = get_timer(0);
 
-		printf("tick=%d\n", tick);
+//		printf("tick=%d\n", tick);
 
         if ( (tick - start)  > 3000 ) {
 			if(rtk_host!=NULL)
@@ -1006,9 +1058,28 @@ static int rtk_sdmmc_stream_cmd(u16 cmdcode, struct sdmmc_cmd_pkt *cmd_info, u8 
     if(rsp_para3 != -1)
         rsp_para3 = cmd_info->rsp_para3;
 
+#if 1 //STC2HI
+    printf("rtk_sdmmc_stream_cmd: cmdcode=0x%x, cmd_idx=0x%x, sd_arg=0x%x\n",
+    		cmdcode, cmd_idx, sd_arg);
+    printf("rsp_para1=0x%x, rsp_para2=0x%x, rsp_para3=0x%x\n",
+    		rsp_para1, rsp_para2, rsp_para3);
+#endif
+
     sa = (data / 8);
     //sa = ((u32)data / 8);
     
+#if 0
+    printf("rtk_sdmmc_stream_cmd\n");
+    printf("cmdcode=0x%x, mmc_detected=%d\n", cmdcode, mmc_detected);
+	printf("dma_addr = 0x%x\n", cmd_info->dma_buffer);
+	printf("sa = 0x%x\n", sa);
+	printf("block_count = %d\n", block_count);
+#endif
+
+#if 0
+	rtk_sdmmc_reset(rtk_host);
+#endif
+
     if((cmdcode == SD_NORMALWRITE)){
    		byte_count = 512;
     }
@@ -1048,6 +1119,11 @@ static int rtk_sdmmc_stream_cmd(u16 cmdcode, struct sdmmc_cmd_pkt *cmd_info, u8 
 	//printf("SD_CONFIGURE1 = %x, SD_CONFIGURE2= %x, SD_CONFIGURE3=%x, SD_BYTE_CNT_L=%x, SD_BYTE_CNT_H=%x, SD_BLOCK_CNT_L=%x, SD_BLOCK_CNT_H=%x\n",readb(sdmmc_base + SD_CONFIGURE1),readb(sdmmc_base + SD_CONFIGURE2),readb(sdmmc_base + SD_CONFIGURE3),readb(sdmmc_base + SD_BYTE_CNT_L),readb(sdmmc_base + SD_BYTE_CNT_H),readb(sdmmc_base + SD_BLOCK_CNT_L),readb(sdmmc_base + SD_BLOCK_CNT_H));
 
     if(cmd_info->data->flags & MMC_DATA_READ){    //jim modified cmd_info->data->flags
+#if 0
+    	printf("MMC_DATA_READ\n");
+    	printf("sa = 0x%x\n", sa);
+    	printf("block_count = %d\n", block_count);
+#endif
         writel((u32)sa, sdmmc_base + CR_SD_DMA_CTL1);
         writel(block_count, sdmmc_base + CR_SD_DMA_CTL2);
 
@@ -1075,20 +1151,39 @@ static int rtk_sdmmc_stream_cmd(u16 cmdcode, struct sdmmc_cmd_pkt *cmd_info, u8 
         else
             writel(DMA_XFER, sdmmc_base + CR_SD_DMA_CTL3);
     }
-    /*printf("CR_SD_DMA_CTL1 = %x, CR_SD_DMA_CTL2=%x, CR_SD_DMA_CTL3=%x\n",readl(sdmmc_base + CR_SD_DMA_CTL1),readl(sdmmc_base + CR_SD_DMA_CTL2),readl(sdmmc_base + CR_SD_DMA_CTL3));*/
+    printf("CR_SD_DMA_CTL1 = %x, CR_SD_DMA_CTL2=%x, CR_SD_DMA_CTL3=%x\n",readl(sdmmc_base + CR_SD_DMA_CTL1),readl(sdmmc_base + CR_SD_DMA_CTL2),readl(sdmmc_base + CR_SD_DMA_CTL3));
     rtk_host->cmd_opcode = cmd_idx;
 #if 0
     flush_dcache_range(cmd_info->dma_buffer,cmd_info->dma_buffer+dma_leng);
 #else /* porting issue */
 	flush_cache(cmd_info->dma_buffer, dma_leng);
 #endif
+
+#if 0
+    for (int i = 0; i < dma_leng; i++)
+    {
+    	printf("cmd_info->dma_buffer[%d] = 0x%x\n", i, ((char*)cmd_info->dma_buffer)[i]);
+    }
+#endif
+
     //rtk_sdmmc_get_cmd_timeout(cmd_info);    //comment by jim
     ret = rtk_sdmmc_cpu_wait(rtk_host, cmdcode);
+
+#if 0
+    for (int i = 0; i < dma_leng; i++)
+    {
+    	printf("dma[%d] = 0x%x\n", i, ((char*)cmd_info->dma_buffer)[i]);
+    }
+#endif
 
 #ifdef CONFIG_SD30
     /* Reset dat64_sel and rsp17_sel, #CMD19 DMA won't be auto-cleared */
     if(cmd_info->cmd->opcode == MMC_SEND_TUNING_BLOCK)
         writel(0x00000000, sdmmc_base + CR_SD_DMA_CTL3);
+#endif
+
+#if 0
+    writel(0x00000000, sdmmc_base + CR_SD_DMA_CTL3);
 #endif
 
     if(ret == 0){
@@ -1098,6 +1193,11 @@ static int rtk_sdmmc_stream_cmd(u16 cmdcode, struct sdmmc_cmd_pkt *cmd_info, u8 
         else{
             rtk_sdmmc_read_rsp(rtk_host,rsp, rsp_len);
            // rtk_sdmmc_debug("%s: stream cmd done\n", __func__);
+        	for (int i = 0; i < 4; i++)
+        	{
+        		printf("rsp[%d] = 0x%x\n", i, rsp[i]);
+        		cmd_info->cmd->response[i] = rsp[i];
+        	}
         }
 		//printf("stream_cmd: cmd=%d, cmd_arg=%x, cmd_flag=%x, rsp_para2=%x, rsp[0]=%x, rsp[1]=%x, rsp[2]=%x, rsp[3]=%x, rsp[4]=%x, SD_TRANSFER=%x\n",cmd_idx, sd_arg, cmd_info->cmd->flags, rsp_para2, rsp[0], rsp[1], rsp[2],rsp[3],rsp[4],readb(sdmmc_base + SD_TRANSFER));
     }
@@ -1245,7 +1345,7 @@ static int rtk_sdmmc_stream(struct sdmmc_cmd_pkt *cmd_info)
 	dma_addr = (uintptr_t)cmd_info->data->dest;	//jim comment
 
 	//DDDDYELLOW("blks# %d, blksize %d, dma_length 0x%08x, dma addr 0x%08x\n", cmd_info->data->blocks, cmd_info->data->blocksize, dma_leng, dma_addr);
-	//printf("dma_addr: 0x%x, dma_leng: 0x%x\n",dma_addr, dma_leng);
+	printf("dma_addr: 0x%x, dma_leng: 0x%x\n",dma_addr, dma_leng);
 
 	if((cmd_idx == SD_CMD_SWITCH_FUNC) && (cmd_info->cmd->flags | MMC_CMD_ADTC)){
 		cmd_info->byte_count = 0x40;
@@ -1348,7 +1448,9 @@ static u8 rtk_sdmmc_get_rsp_type(struct mmc_cmd* cmd)
     else
        rsp_type = SD_R0;
 
+#if 0
     printf("rtk_sdmmc_get_rsp_type: 0x%02x\n", rsp_type);
+#endif
 
     return rsp_type;
 }
@@ -1668,11 +1770,16 @@ static int rtk_sdmmc_send_cmd_get_rsp(struct sdmmc_cmd_pkt *cmd_info)
 
     sd_arg = cmd_info->cmd->arg;
 
-    printf("sd_arg=0x%x\n", sd_arg);
-
     rsp_para1 = cmd_info->rsp_para1;
     rsp_para2 = cmd_info->rsp_para2;
     rsp_para3 = cmd_info->rsp_para3;
+
+#if 1 //STC2HI
+    printf("rtk_sdmmc_send_cmd_get_rsp: cmd_idx=0x%x, sd_arg=0x%x\n",
+    		cmd_idx, sd_arg);
+    printf("rsp_para1=0x%x, rsp_para2=0x%x, rsp_para3=0x%x\n",
+    		rsp_para1, rsp_para2, rsp_para3);
+#endif
 
     if (rsp_para1 != -1)
         writeb(rsp_para1, sdmmc_base + SD_CONFIGURE1);
@@ -1700,6 +1807,10 @@ static int rtk_sdmmc_send_cmd_get_rsp(struct sdmmc_cmd_pkt *cmd_info)
     
     if(RESP_TYPE_17B & rsp_para2){
         /*remap the resp dst buffer to un-cache*/
+
+    	printf("dma_phy_addr=0x%p, dma_virt_addr=0x%p, byte_count=%d, block_count=%d\n",
+    			dma_phy_addr, dma_virt_addr, byte_count, block_count);
+
         sa = (u64)((void *)dma_phy_addr);
         sa = sa / 8;
         dma_val = RSP17_SEL | DDR_WR | DMA_XFER;
@@ -1733,6 +1844,12 @@ static int rtk_sdmmc_send_cmd_get_rsp(struct sdmmc_cmd_pkt *cmd_info)
 	}
 	else {
 		rtk_sdmmc_read_rsp(rtk_host, rsp, rsp_len);
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		printf("rsp[%d] = 0x%x\n", i, rsp[i]);
+		cmd_info->cmd->response[i] = rsp[i];
 	}
 
 	sync();
@@ -1787,8 +1904,6 @@ static int rtk_sdmmc_request(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_da
 	return ret;
 }
 
-#if 0
-
 static void rtk_sdmmc_set_access_mode(struct rtk_sdmmc_host *rtk_host,u8 level)
 {
     u32 sdmmc_base = rtk_host->sdmmc_base;
@@ -1807,8 +1922,6 @@ static void rtk_sdmmc_set_access_mode(struct rtk_sdmmc_host *rtk_host,u8 level)
 
     writeb(tmp_bits, sdmmc_base + SD_CONFIGURE1);
 }
-
-#endif
 
 static void rtk_sdmmc_set_bits(struct rtk_sdmmc_host *rtk_host, unsigned int set_bit)
 {
@@ -1869,6 +1982,8 @@ static void rtk_sdmmc_set_ios(struct mmc *mmc, unsigned int caps)
 	}
 }
 
+#endif
+
 static void rtk_sdmmc_init(void)
 {
 	struct rtk_sdmmc_host *rtk_host = sd_rtk_sdmmc_host;
@@ -1879,10 +1994,10 @@ static void rtk_sdmmc_init(void)
 	}
 
 	u32 emmc_base = rtk_host->emmc_base;
-    //printf("%s , rtk_host->sdmmc_base = %x\n", __func__, rtk_host->sdmmc_base);
-    //printf("%s , rtk_host->crt_base = %x\n", __func__, rtk_host->crt_base);
-    //printf("%s , rtk_host->emmc_base = %x\n", __func__, rtk_host->emmc_base);
-    //printf("%s , rtk_host->sysbrdg = %x\n", __func__, rtk_host->sysbrdg);
+    printf("%s , rtk_host->sdmmc_base = %x\n", __func__, rtk_host->sdmmc_base);
+    printf("%s , rtk_host->crt_base = %x\n", __func__, rtk_host->crt_base);
+    printf("%s , rtk_host->emmc_base = %x\n", __func__, rtk_host->emmc_base);
+    printf("%s , rtk_host->sysbrdg = %x\n", __func__, rtk_host->sysbrdg);
 
     writel(0x03200332,0x98012618);
     writel(0x55550555,0x98012604);
@@ -1948,6 +2063,8 @@ static void rtk_sdmmc_init(void)
 
 	writeb(0x02, rtk_host->sdmmc_base + CARD_SELECT); //for emmc, select SD ip
 }
+
+#if 0
 
 static int rtk_sdmmc_getcd(struct mmc *mmc){
 
@@ -2033,26 +2150,156 @@ static int rtk_sdmmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 {
 	struct mmc *mmc = mmc_get_mmc_dev(dev);
 
+#if 0
 	printf("rtk_sdmmc_send_cmd\n");
 	printf("cmd->cmdidx=0x%02x\n", cmd->cmdidx);
 	printf("cmd->resp_type=0x%02x\n", cmd->resp_type);
+#endif
 
 	switch (cmd->cmdidx)
 	{
-		case MMC_CMD_GO_IDLE_STATE:
-#if 1
+		case MMC_CMD_GO_IDLE_STATE: //0:
 			cmd->opcode = cmd->cmdidx;
 	        cmd->arg = cmd->cmdarg;
 	        cmd->resp_type = MMC_RSP_NONE;
 	        cmd->flags = 0xc0;
-#else
-	        // Put the Card in Identify Mode
-	        cmd->opcode = MMC_CMD_ALL_SEND_CID;
-	        cmd->resp_type = MMC_RSP_R2;
-	        cmd->arg = 0;
-	        cmd->flags = 0x67;
-#endif
 			break;
+
+		case SD_CMD_SEND_IF_COND: //8:
+	        cmd->opcode = cmd->cmdidx;
+	        cmd->arg = 0x1aa; // ((mmc->voltages & 0xff8000) != 0) << 8 | 0xaa;
+	        cmd->resp_type = MMC_RSP_R7;
+	        cmd->flags = 0x2f5;    //change this flag
+			break;
+
+		case MMC_CMD_APP_CMD: //55:
+			cmd->opcode = cmd->cmdidx;
+			cmd->resp_type = MMC_RSP_R1;
+			if (cmd->cmdarg != 0)
+			{
+		        cmd->arg = cmd->cmdarg; //mmc->rca << 16;
+		        cmd->flags = 0x95;
+			}
+			else
+			{
+				cmd->arg = 0;
+				cmd->flags = 0xf5;	//change this flag
+			}
+			break;
+
+		case SD_CMD_APP_SEND_OP_COND: //41
+			cmd->opcode = cmd->cmdidx;
+			cmd->resp_type = MMC_RSP_R3;
+
+#if 0
+			// Most cards do not answer if some reserved bits
+			// in the ocr are set. However, Some controller
+			// can set bit 7 (reserved for low voltages), but
+			// how to manage low voltages SD card is not yet
+			// specified.
+
+			cmd.arg = mmc_host_is_spi(mmc) ? 0 :
+			(mmc->voltages & 0xff8000);
+
+			if (mmc->version == SD_VERSION_2)
+				cmd.arg |= OCR_HCS;
+#endif
+
+			//==========Modify the command argumnet=============
+			cmd->arg |= 0x4120;
+			cmd->arg = cmd->arg <<16;
+			cmd->flags=0xe1;
+			break;
+
+		case MMC_CMD_ALL_SEND_CID: //2
+			cmd->opcode = cmd->cmdidx;
+			cmd->resp_type = MMC_RSP_R2;
+			cmd->arg = 0;
+			//cmd.flags = 0;    //jim comment
+			cmd->flags = 0x67;   //jim add
+			break;
+
+		case SD_CMD_SEND_RELATIVE_ADDR: //3
+            cmd->opcode = cmd->cmdidx;
+            cmd->arg = mmc->rca << 16;
+            cmd->resp_type = MMC_RSP_R6;
+            //cmd.flags = 0;
+            cmd->flags = 0x75;	//change the flags
+            break;
+
+		case MMC_CMD_SEND_CSD: //9
+            cmd->opcode = cmd->cmdidx;
+            cmd->resp_type = MMC_RSP_R2;
+            cmd->arg = mmc->rca << 16;
+    //      cmd.flags = 0;
+            cmd->flags = 0x7;   //chnage the flags
+            break;
+
+		case MMC_CMD_SELECT_CARD: //7
+			cmd->opcode = cmd->cmdidx;
+			cmd->resp_type = MMC_RSP_R1;
+			cmd->arg = mmc->rca << 16;
+			//cmd.flags = 0;
+			cmd->flags = 0x15;   //change the flags
+			break;
+
+		case SD_CMD_APP_SEND_SCR: //51
+	        cmd->opcode = cmd->cmdidx;
+	        cmd->resp_type = MMC_RSP_R1;
+	        cmd->arg = 0;
+	        //cmd.flags = 0;
+	        cmd->flags = 0xb5;    //Modify the flags
+	        break;
+
+		//case SD_CMD_APP_SET_BUS_WIDTH: //6
+		case SD_CMD_SWITCH_FUNC: //6:
+	        cmd->opcode = cmd->cmdidx;
+	        cmd->resp_type = MMC_RSP_R1;
+	        cmd->arg = cmd->cmdarg;
+	        //cmd.flags = 0;
+	        if (data != 0)
+	        {
+	        	cmd->flags = 0xb5;    //Modify the flags
+	        }
+	        else
+	        {
+	        	//SD_CMD_APP_SET_BUS_WIDTH
+				cmd->flags = 0x15;   //change the flags
+	        }
+			break;
+
+		case SD_CMD_APP_SD_STATUS: //13
+			cmd->opcode = cmd->cmdidx;
+			cmd->resp_type = MMC_RSP_R1;
+			cmd->arg = cmd->cmdarg;
+	        //cmd.flags = 0;
+	        cmd->flags = 0xb5;    //Modify the flags
+			break;
+
+		case MMC_CMD_SET_BLOCKLEN: //16
+			cmd->opcode = cmd->cmdidx;
+	    	cmd->resp_type = MMC_RSP_R1;
+	    	cmd->arg = cmd->cmdarg;
+	    	cmd->flags = 0x15; //????
+	    	break;
+
+		case MMC_CMD_READ_SINGLE_BLOCK: //17
+		case MMC_CMD_READ_MULTIPLE_BLOCK: //18
+		case MMC_CMD_WRITE_SINGLE_BLOCK: //24
+		case MMC_CMD_WRITE_MULTIPLE_BLOCK: //25
+			cmd->opcode = cmd->cmdidx;
+	    	cmd->arg = cmd->cmdarg;
+	    	cmd->resp_type = MMC_RSP_R1;
+			//cmd.flags = 0;
+			cmd->flags = 0xb5;       //change this flag
+			break;
+
+		case MMC_CMD_STOP_TRANSMISSION:
+			cmd->opcode = cmd->cmdidx;
+	    	cmd->arg = cmd->cmdarg;
+	    	cmd->resp_type = MMC_RSP_R1b;
+            cmd->flags = 0;
+            break;
 
 		default:
 			printf("NOT HANDLED!\n");
@@ -2060,6 +2307,13 @@ static int rtk_sdmmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 	}
 
 	return rtk_sdmmc_request(mmc, cmd, data);
+}
+
+void rtksdmmc_set_clock(void)
+{
+	printf("rtksdmmc_set_clock\n");
+
+	rtk_sdmmc_speed(sd_rtk_sdmmc_host, SDMMC_CLOCK_6200KHZ);
 }
 
 static int rtk_sdmmc_set_ios(struct udevice *dev)
@@ -2071,11 +2325,56 @@ static int rtk_sdmmc_set_ios(struct udevice *dev)
 	printf("clock=%d\n", mmc->clock);
 	printf("bus_width=0x%x\n", mmc->bus_width);
 
+#if 1 //STC2HI : workaround
+	if ((mmc->clock == 400000) && (mmc->bus_width == 4))
+	{
+		rtk_sdmmc_set_bits(host, BUS_WIDTH_4);
+		return 0;
+	}
+#endif
+
+	if (mmc->bus_width == 4){
+		rtk_sdmmc_set_bits(host, BUS_WIDTH_4);
+	}
+	else{
+		rtk_sdmmc_set_bits(host, BUS_WIDTH_1);
+	}
+
+#ifdef CONFIG_SD30
+		if(mmc->clock >= 208000000) {
+			rtk_sdmmc_set_access_mode(rtk_host, ACCESS_MODE_SD30);
+			rtk_sdmmc_speed(rtk_host, SDMMC_CLOCK_208000KHZ);
+			//	printf("%s: UHS mode Speed SDMMC_CLOCK_208000KHZ\n", __func__);
+		}
+		else if(mmc->clock>=100000000) {
+			rtk_sdmmc_set_access_mode(rtk_host, ACCESS_MODE_SD30);
+			rtk_sdmmc_speed(rtk_host, SDMMC_CLOCK_100000KHZ);
+			//	printf("%s: UHS mode Speed SDMMC_CLOCK_100000KHZ\n", __func__);
+		}
+		else if(mmc->clock >= 50000000) {
+#else
+		if(mmc->clock >= 50000000) {
+#endif
+			rtk_sdmmc_set_access_mode(host, ACCESS_MODE_SD20);
+			rtk_sdmmc_speed(host, SDMMC_CLOCK_50000KHZ);
+			// printf("%s: High Speed SDMMC_CLOCK_50000KHZ\n", __func__);
+		}
+		else if(mmc->clock >= 6200000) {
+			rtk_sdmmc_speed(host, SDMMC_CLOCK_6200KHZ);
+			//printf("%s: Mid speed RTKCR_FCARD_SELECTED = 1 SDMMC_CLOCK_6200KHZ\n", __func__);
+		}
+		else {
+			rtk_sdmmc_speed(host, SDMMC_CLOCK_400KHZ);
+			//printf("%s: set clock SDMMC_CLOCK_400KHZ\n", __func__);
+		}
+
 #if 0
-	rtk_sdmmc_set_bits(host, BUS_WIDTH_4);
+	rtk_sdmmc_set_bits(host, BUS_WIDTH_1); //BUS_WIDTH_4);
 
-	rtk_sdmmc_speed(host, SDMMC_CLOCK_50000KHZ); //SDMMC_CLOCK_400KHZ);
+	rtk_sdmmc_speed(host, SDMMC_CLOCK_6200KHZ); //SDMMC_CLOCK_400KHZ);
+#endif
 
+#if 0
 	rtk_sdmmc_switch_voltage(mmc, 0); //MMC_SIGNAL_VOLTAGE_180);
 #endif
 #if 0
@@ -2100,6 +2399,7 @@ static int rtk_sdmmc_getcd(struct udevice *dev)
 		return 1;
 	}
 	printf("SD is not exist, regCARD_EXIST = 0x%02x (CD flag is 0x%02x)\n", reginfo, SD_EXISTENCE);
+
 	return 0;
 }
 
@@ -2120,6 +2420,7 @@ static int rtk_sdmmc_execute_tuning_(struct udevice *dev, uint opcode)
 
 	return rtk_sdmmc_execute_tuning(mmc, opcode);
 }
+
 
 static int rtk_sdmmc_probe(struct udevice *dev)
 {
@@ -2142,13 +2443,14 @@ static int rtk_sdmmc_probe(struct udevice *dev)
 						0/*MMC_MODE_HC*/;
 	cfg->name = dev->name;
 	upriv->mmc = &plat->mmc;
+	plat->mmc.priv = host;
 
 #if 0
 #ifdef CONFIG_SD30
 	mmc->switch_voltage = rtk_sdmmc_switch_voltage;
 	mmc->execute_tuning = rtk_sdmmc_execute_tuning;
 #endif
-	mmc->priv = rtk_host;
+	mmc->priv = host;
 #endif
 
 #if 0
@@ -2190,92 +2492,752 @@ static int rtk_sdmmc_probe(struct udevice *dev)
     host->emmc_base = 0x98012000;
     host->sysbrdg = 0x9801A000;
 
-    //rtk_sdmmc_init();
-#if 0
-    {
-    	struct rtk_sdmmc_host *rtk_host = host;
+    sd_rtk_sdmmc_host = host;
 
-    	u32 emmc_base = rtk_host->emmc_base;
-        //printf("%s , rtk_host->sdmmc_base = %x\n", __func__, rtk_host->sdmmc_base);
-        //printf("%s , rtk_host->crt_base = %x\n", __func__, rtk_host->crt_base);
-        //printf("%s , rtk_host->emmc_base = %x\n", __func__, rtk_host->emmc_base);
-        //printf("%s , rtk_host->sysbrdg = %x\n", __func__, rtk_host->sysbrdg);
-
-        writel(0x03200332,0x98012618);
-        writel(0x55550555,0x98012604);
-        writel(0x33333323,0x98012610);
-        /*SD PLL Initialization, jamestai20150721*/
-        writel(readl(rtk_host->crt_base + CR_PLL_SD4) | 0x00000004, rtk_host->crt_base + CR_PLL_SD4);
-        writel(readl(rtk_host->crt_base + CR_PLL_SD4) | 0x00000007, rtk_host->crt_base + CR_PLL_SD4);
-
-        writel(0x00002003, rtk_host->crt_base + CR_PLL_SD1); //PLL_SD1
-
-        if(readl(rtk_host->sysbrdg+0x204)!=0x0)
-            writel(0x40000000,rtk_host->sdmmc_base+0x2c);
-        udelay(100);
-        writel(0x00000006, rtk_host->crt_base + 0x01EC);
-        writel(readl(rtk_host->sdmmc_base + CR_SD_CKGEN_CTL) | 0x00070000, rtk_host->sdmmc_base + CR_SD_CKGEN_CTL); //Switch SD source clock to 4MHz by Hsin-yin
-        mdelay(2);
-        writel(0x00000007, rtk_host->crt_base + 0x01EC);
-        if(readl(rtk_host->sysbrdg+0x204)!=0x0)
-            writel(0x00000000,rtk_host->sdmmc_base+0x2c);
-
-    	if(readl(rtk_host->sysbrdg+0x204)!=0x0)	//A01 version, we add dummy register
-    		writel(0x40000000,rtk_host->sdmmc_base+0x2c);
-        udelay(100);
-        writel(0x00000006, rtk_host->crt_base + 0x01EC);
-        writel(0x04517893, rtk_host->crt_base + CR_PLL_SD2); //Reduce the impact of spectrum by Hsin-yin, jamestai20150302
-        writel(0x00564388, rtk_host->crt_base + CR_PLL_SD3); //Set PLL clock rate, default clock 100MHz
-        mdelay(2);
-        writel(0x00000007, rtk_host->crt_base + 0x01EC);
-        if(readl(rtk_host->sysbrdg+0x204)!=0x0)
-            writel(0x00000000,rtk_host->sdmmc_base+0x2c);
-
-        writel(readl(rtk_host->crt_base + 0x04) | (0x1 << 10), rtk_host->crt_base + 0x04);
-        writel(readl(rtk_host->crt_base + 0x0C) | (0x1 << 25) | (0x1 << 31), rtk_host->crt_base + 0x0C);
-        //writel(readl(rtk_host->sdmmc_base + 0x20) | 0x00000003, rtk_host->sdmmc_base + 0x20);
-        writel(readl(rtk_host->sdmmc_base + 0x20) |0x02, rtk_host->sdmmc_base + 0x20);    //Disable L4 gate
-
-        writel(readl(rtk_host->sdmmc_base + 0x20) & (~0x01), rtk_host->sdmmc_base + 0x20);
-        writel(readl(rtk_host->sdmmc_base + 0x20) | 0x00000001, rtk_host->sdmmc_base + 0x20);   //reset the DMA
-
-        if(readl(rtk_host->sysbrdg+0x204)!=0x0)
-            writel(0x40000000,rtk_host->sdmmc_base+0x2c);
-        udelay(100);
-    	writel(0x00000006, rtk_host->crt_base + 0x01EC);
-    	writel(readl(rtk_host->sdmmc_base + CR_SD_CKGEN_CTL) & 0xFFF8FFFF, rtk_host->sdmmc_base + CR_SD_CKGEN_CTL); //Switch SD source clock to normal clock source by Hsin-yin
-    	udelay(100);
-    	writel(0x00000007, rtk_host->crt_base + 0x01EC);
-        if(readl(rtk_host->sysbrdg+0x204)!=0x0)
-            writel(0x00000000,rtk_host->sdmmc_base+0x2c);
-
-    	writeb(readb(rtk_host->sdmmc_base + SD_CONFIGURE1) & 0x000000EF, rtk_host->sdmmc_base + SD_CONFIGURE1); //Reset FIFO pointer by Hsin-yin
-    	writel(0x00000007, rtk_host->crt_base + CR_PLL_SD4); //PLL_SD4
-    	udelay(100);
-    	writeb(0xD0, rtk_host->sdmmc_base + SD_CONFIGURE1);
-    	rtk_sdmmc_speed(rtk_host, SDMMC_CLOCK_400KHZ);
-
-    	writel(0x00003333, emmc_base + 0x634);         //JIM modified this part from 3333 to 5555 to enlarge the signal to work around a issue that can not recognize some SD 3.0 card
-        writel(0x33333333, emmc_base + 0x638);
-
-    	writel(0x00000000, rtk_host->sdmmc_base + CR_SD_PAD_CTL); //change to 3.3v
-
-    	writel(0x00000016, rtk_host->sdmmc_base + CR_SD_ISR); //enable interrupt
-    	writel(0x00000017, rtk_host->sdmmc_base + CR_SD_ISREN);
-
-    	writeb(0x02, rtk_host->sdmmc_base + CARD_SELECT); //for emmc, select SD ip
-    }
-#endif
+    rtk_sdmmc_init();
 
 	return 0;
 #endif
 }
 
+
+#endif
+
+
+//TESTING
+
+
+#define _REG_SOFT_RESET2					(0x98000004)
+#define _REG_CLOCK_ENABLE1				(0x9800000C)
+
+#define _REG_PLL_SD1						(0x980001E0)
+#define _REG_PLL_SD2						(0x980001E4)
+#define _REG_PLL_SD3						(0x980001E8)
+#define _REG_PLL_SD4						(0x980001EC)
+
+#define _REG_MIS_GP3DIR					(0x9801B10C)
+#define _REG_MIS_GP3DATO					(0x9801B11C)
+
+#define _REG_CR_SD_ISR					(0x98010424)
+#define _REG_CR_SD_ISREN					(0x98010428)
+
+#define _REG_CR_SD_PAD_CTL				(0x98010474)
+#define _REG_CR_SD_CKGEN_CTL				(0x98010478)
+
+#define _REG_CR_CARD_OE					(0x98010504)
+#define _REG_CARD_SELECT					(0x9801050e)
+#define _REG_CARD_EXIST					(0x9801051F)
+#define _REG_CR_SD_INT_EN				(0x98010520)
+
+
+#define _REG_CARD_SD_CLK_PAD_DRIVE		(0x98010530)
+#define _REG_CARD_SD_CMD_PAD_DRIVE		(0x98010531)
+#define _REG_CARD_SD_DAT_PAD_DRIVE		(0x98010532)
+
+#define _REG_SD_CONFIGURE1				(0x98010580)
+//#define SDCLK_DIV						(0x01 << 7)
+//#define MASK_BUS_WIDTH					(0x03)
+//#define RST_RDWR_FIFO					(0x01 << 4)
+//#define BUS_WIDTH_1						(0x00)
+//#define BUS_WIDTH_4						(0x01)
+//#define BUS_WIDTH_8						(0x02)
+
+#define _REG_SD_CONFIGURE2				(0x98010581)
+#define _REG_SD_CONFIGURE3				(0x98010582)
+
+#define _REG_SD_STATUS2					(0x98010584)
+#define _REG_SD_BUS_STATUS				(0x98010585)
+
+
+int Data_80006900;
+int Data_80006904;
+int Data_80006908;
+int Data_8000690c;
+
+
+void prints(char* str)
+{
+	printf("%s", str);
+}
+
+void print_hex(int a)
+{
+	printf("%x", a);
+}
+
+/* 75fc - complete */
+void sync_75fc(void)
+{
+	asm volatile ("DMB SY" : : : "memory");
+	*((volatile int*)0x9801a020) = 0;
+	asm volatile ("DMB SY" : : : "memory");
+}
+
+#if 0
+
+void func_1500()
+{
+
+}
+
+
+void func_fdb0(int a, int b)
+{
+	udelay(1000);
+}
+
+
+void func_fe00(int a, int b)
+{
+	udelay(1000);
+}
+
+void func_11040(volatile char* x20, char mask, char bits)
+{
+	int sdmmc_base = 0x98010400;
+	int i = 0;
+
+	while (1)
+	{
+		char val = *x20;
+
+		printf("func_11040: val = 0x%x\n", val);
+#if 0
+		printf("%s(%d):\n opcode=%d trans: 0x%08x, st1: 0x%08x, st2: 0x%08x, bus: 0x%08x\n",
+			__func__,
+			__LINE__,
+			0, //rtk_host->cmd_opcode,
+			readb(sdmmc_base + SD_TRANSFER),
+			readb(sdmmc_base + SD_STATUS1),
+			readb(sdmmc_base + SD_STATUS2),
+			readb(sdmmc_base + SD_BUS_STATUS));
+#else
+		prints("Trans 0x"); print_hex(*((volatile char*)0x98010593)); prints("\n");
+		prints("St1 0x"); print_hex(*((volatile char*)0x98010583)); prints("\n");
+		prints("St2 0x"); print_hex(*((volatile char*)0x98010584)); prints("\n");
+		prints("Bus 0x"); print_hex(*((volatile char*)0x98010585)); prints("\n");
+#endif
+
+		if ((mask & val) == bits)
+		{
+			break;
+		}
+
+		if (i++ > 3000)
+		{
+			prints("Time out \n");
+			return;
+		}
+
+//		func_fdb0(0, 1);
+	}
+
+	if ((mask & *x20) != bits)
+	{
+		func_1500();
+	}
+}
+
+#endif
+
+void sdmmc_configure(int a)
+{
+	switch (a)
+	{
+	case 0:
+		//111b0
+		if (Data_80006900 != 0)
+		{
+			//111c4
+			*((volatile char*)_REG_SD_CONFIGURE1) = 8 | BUS_WIDTH_4;
+			*((volatile int*)_REG_CR_SD_CKGEN_CTL) = 0x2103;
+		}
+		else
+		{
+			//0x11210
+			*((volatile char*)_REG_SD_CONFIGURE1) = BUS_WIDTH_4;
+			*((volatile int*)_REG_CR_SD_CKGEN_CTL) = 0x2102;
+		}
+		break;
+
+	case 1:
+		//11100
+		if (Data_80006900 != 0)
+		{
+			//0x11230
+			*((volatile char*)_REG_SD_CONFIGURE1) = 8 | BUS_WIDTH_4;
+			*((volatile int*)_REG_CR_SD_CKGEN_CTL) = 0x2102;
+		}
+		else
+		{
+			//11114
+			*((volatile char*)_REG_SD_CONFIGURE1) = BUS_WIDTH_4;
+			*((volatile int*)_REG_CR_SD_CKGEN_CTL) = 0x2101;
+		}
+		break;
+
+	case 2:
+		//11134
+		*((volatile char*)_REG_SD_CONFIGURE1) = RST_RDWR_FIFO | SDCLK_DIV | BUS_WIDTH_1; //0x90
+		*((volatile int*)_REG_PLL_SD4) = 4;
+		*((volatile int*)_REG_PLL_SD4) = 4 | 2 | 1;
+		*((volatile int*)_REG_PLL_SD2) = 0x04517893;
+		*((volatile int*)_REG_PLL_SD3) = 0x00aa4388;
+		*((volatile int*)0x9801042c) = ~(*((volatile int*)0x9801042c)) & 0x40000000;
+		sync_75fc();
+		*((volatile char*)_REG_SD_CONFIGURE1) = SDCLK_DIV | BUS_WIDTH_1; //0x80
+
+		break;
+
+	case 3:
+		//111e4
+		*((volatile char*)_REG_SD_CONFIGURE1) = BUS_WIDTH_4;
+		*((volatile int*)_REG_CR_SD_CKGEN_CTL) = 0x2103;
+		sync_75fc();
+		break;
+
+	default:
+		break;
+	}
+
+	sync_75fc();
+}
+
+
+/* 11250 - complete */
+void sdmmc_init(void)
+{
+#if 1
+	*((volatile int*)_REG_SOFT_RESET2) |= 0x400; //SOFT_RESET2_rstn_cr
+	*((volatile int*)_REG_CLOCK_ENABLE1) |= 0x82000000; // (1 << 31)? | CLOCK_ENABLE1_clk_en_cr
+	*((volatile int*)_REG_CR_SD_PAD_CTL) = 0;
+	*((volatile int*)_REG_PLL_SD1) = 0x2003; // (1 << 13)? | PLL_SD1_phrt0 | PLL_SD1_bias
+	*((volatile char*)_REG_CARD_SD_CLK_PAD_DRIVE) = 0;
+	*((volatile char*)_REG_CARD_SD_CMD_PAD_DRIVE) = 0;
+	*((volatile char*)_REG_CARD_SD_DAT_PAD_DRIVE) = 0;
+	*((volatile char*)_REG_SD_CONFIGURE2) = 0;
+	*((volatile char*)_REG_SD_CONFIGURE3) = 2;
+	*((volatile char*)_REG_SD_STATUS2) = 0;
+	*((volatile char*)_REG_SD_BUS_STATUS) = 0x80;
+
+	sync_75fc();
+
+	sdmmc_configure(2);
+
+	sync_75fc();
+
+	*((volatile int*)_REG_MIS_GP3DIR) |= 0x8;
+	*((volatile int*)_REG_MIS_GP3DATO) = *((volatile int*)_REG_MIS_GP3DIR) & ~8;
+
+	sync_75fc();
+
+	*((volatile char*)_REG_CARD_SELECT) = 2;
+	*((volatile char*)_REG_CR_CARD_OE) = 4;
+	*((volatile char*)_REG_CR_SD_INT_EN) = 4;
+	*((volatile int*)0x98010420) = 3;
+	*((volatile int*)_REG_CR_SD_ISR) = 0x16;
+	*((volatile int*)_REG_CR_SD_ISREN) = 0x17;
+
+	sync_75fc();
+#endif
+}
+
+#if 0
+
+void func_113ac(int w19, int w20)
+{
+	switch (w19)
+	{
+	case MMC_CMD_GO_IDLE_STATE: //0:
+		//118D4 (00c4)
+		//*((volatile char*)0x98010581) = 0x74;
+	    writeb(0x74, 0x98010400 + SD_CONFIGURE2);
+		//*((volatile char*)0x98010582) = 0x02;
+	    writeb(0x02, 0x98010400 + SD_CONFIGURE3);
+		//->113f0
+		break;
+
+	case 2:
+		//118FC
+		*((volatile int*)0x98010404) = 0x4000 | (1 << 16);
+		*((volatile int*)0x98010408) = 1;
+		*((volatile int*)0x9801040c) = 0x12;
+
+		*((volatile char*)0x98010581) = 0x76;
+		*((volatile char*)0x98010582) = 0x03;
+		//->0x113f0
+		break;
+
+	case 6:
+		//11950
+		if (Data_80006904 == 0)
+		{
+			//11960
+			*((volatile int*)0x98010404) = 0x1e00;
+			*((volatile int*)0x98010408) = 1;
+			*((volatile int*)0x9801040c) = 0x22;
+
+			*((volatile char*)0x98010581) = 0x31;
+			*((volatile char*)0x98010582) = 0x07;
+
+			*((volatile char*)0x9801058F) = 0x40;
+			*((volatile char*)0x98010590) = 0;
+			*((volatile char*)0x98010591) = 1;
+			*((volatile char*)0x98010592) = 0;
+		}
+		//->0x113f0
+		break;
+
+	case 7:
+		//119C0
+		*((volatile char*)0x98010581) = 0x79;
+		*((volatile char*)0x98010582) = 0x07;
+		//->0x113f0
+		break;
+
+	case 12:
+		//119E8
+		*((volatile char*)0x98010581) = 0x79;
+		*((volatile char*)0x98010582) = 0x47;
+		//->0x113f0
+		break;
+
+	case 19:
+		//11A10
+		if (Data_80006904 == 0)
+		{
+			//11a20
+			*((volatile int*)0x98010404) = 0x3000 | (1 << 16);
+			//->1197c
+			*((volatile int*)0x98010408) = 1;
+			*((volatile int*)0x9801040c) = 0x22;
+			*((volatile char*)0x98010581) = 0x31;
+			*((volatile char*)0x98010582) = 0x07;
+
+			*((volatile char*)0x9801058F) = 0x40;
+			*((volatile char*)0x98010590) = 0;
+			*((volatile char*)0x98010591) = 1;
+			*((volatile char*)0x98010592) = 0;
+		}
+		//->0x113f0
+		break;
+
+	case 41:
+		//11A44
+		*((volatile char*)0x98010581) = 0x75;
+		*((volatile char*)0x98010582) = 0x03;
+		//->0x113f0
+		break;
+
+	case 51:
+		//11A6C
+		*((volatile int*)0x98010404) = 0x4000 | (1 << 16);
+		*((volatile int*)0x98010408) = 1;
+		*((volatile int*)0x9801040c) = 0x22;
+
+		*((volatile char*)0x98010581) = 0x71;
+		*((volatile char*)0x98010582) = 0x07;
+
+		*((volatile char*)0x9801058F) = 0x40;
+		//->119b0
+		*((volatile char*)0x98010590) = 0;
+		*((volatile char*)0x98010591) = 1;
+		*((volatile char*)0x98010592) = 0;
+		break;
+
+	default:
+		//113CC (ff82)
+		*((volatile char*)0x98010581) = 0x71;
+		*((volatile char*)0x98010582) = 0x07;
+		//113f0
+		break;
+	}
+	//113f0
+	sync_75fc();
+
+	//*((volatile char*)0x98010589) = (char)(w19 | 0x40);
+	writeb((char)(w19 | 0x40), 0x98010400 + SD_CMD0);
+
+	*((volatile char*)0x9801058a) = (char)(w20 >> 24);
+	*((volatile char*)0x9801058b) = (char)(w20 >> 16);
+	*((volatile char*)0x9801058c) = (char)(w20 >> 8);
+	*((volatile char*)0x9801058d) = (char)(w20 >> 0);
+
+	sync_75fc();
+
+	if (Data_80006904 == 1)
+	{
+		//->0x11884
+		prints("AppCommand 0x");
+	}
+	else
+	{
+		//1145c
+		prints("Command 0x");
+	}
+	//11468
+	print_hex(w19);
+	prints("\n");
+
+	if (w19 == 2)
+	{
+		//11860
+		*((volatile int*)0x9801040c) = 0x13;
+		*((volatile char*)0x98010593) = 0x88;
+	}
+	else if (w19 == 51)
+	{
+		//0x114a0
+		*((volatile int*)0x9801040c) = 0x23;
+		*((volatile char*)0x98010593) = 0x8c;
+	}
+	else if ((Data_80006904 == 0) && (w19 == 6))
+	{
+		//0x114a0
+		*((volatile int*)0x9801040c) = 0x23;
+		*((volatile char*)0x98010593) = 0x8c;
+	}
+	else if (w19 == 19)
+	{
+		//0x118a0
+		*((volatile int*)0x9801040c) = 0x23;
+		*((volatile char*)0x98010593) = 0x8f;
+	}
+	else
+	{
+		//115cc
+		*((volatile char*)0x98010593) = 0x88;
+	}
+	//0x114c0
+	sync_75fc();
+
+	func_11040(0x98010424, 2, 2);
+
+	prints("\011interrupt 0x98010424 = 0x");
+	print_hex(*((volatile char*)0x98010424));
+	prints("\n");
+
+	if (*((volatile int*)0x98010424) & (1 << 2))
+	{
+		prints("\011error status 1=0x");
+		print_hex(*((volatile char*)0x98010583));
+		prints("\n");
+
+		prints("\011error status 2=0x");
+		print_hex(*((volatile char*)0x98010584));
+		prints("\n");
+
+		prints("\011bus status = 0x");
+		print_hex(*((volatile char*)0x98010585));
+		prints("\n");
+
+		if ((*((volatile char*)0x98010583) & (1 << 7)) ||
+				(*((volatile char*)0x98010583) & (1 << 6)))
+		{
+			//0x11774
+			prints("\011CRC7 or CRC16 error!!!!! \n");
+			//11780
+		}
+		//1158c
+		else if (*((volatile char*)0x98010583) & (1 << 0))
+		{
+			//0x118c4
+			prints("\011SD Tuning Pattern Compare Error!!!!!! \n");
+			//->0x11780
+		}
+		//11594
+		else if (*((volatile char*)0x98010584) & (1 << 0))
+		{
+			//1159c
+			prints("\011Response Timeout!!!!! \n");
+			//->0x11780
+		}
+		else
+		{
+			//->0x11b7c
+			prints("\011Other errors!!!!! \n");
+			//->0x11780
+		}
+		//11780
+		switch (w19)
+		{
+		case 13:
+			break;
+		case 19:
+			break;
+		default:
+			//11790
+			*((volatile int*)0x98010424) = 0x16;
+			break;
+		}
+	}
+	else
+	{
+		//0x115e0
+		prints("\011Command pass \n");
+		prints("\011response 0x98010589 = 0x");
+		print_hex(*((volatile char*)0x98010589));
+		prints("\n");
+		prints("\011response 0x9801058A = 0x");
+		print_hex(*((volatile char*)0x9801058a));
+		prints("\n");
+		prints("\011response 0x9801058B = 0x");
+		print_hex(*((volatile char*)0x9801058b));
+		prints("\n");
+		prints("\011response 0x9801058C = 0x");
+		print_hex(*((volatile char*)0x9801058c));
+		prints("\n");
+		prints("\011response 0x9801058D = 0x");
+		print_hex(*((volatile char*)0x9801058d));
+		prints("\n");
+		prints("\011response 0x9801058E = 0x");
+		print_hex(*((volatile char*)0x9801058e));
+		prints("\n");
+		//116dc
+	}
+	//->0x116dc
+	sync_75fc();
+
+	if (w19 == 2)
+	{
+		//117ac
+		func_11040(0x9801040c, 1, 0);
+
+		if (*((volatile int*)0x9801040c) & (1 << 0))
+		{
+			//0x11b6c
+			prints("DMA not finish!!!!!!!!!!!!!!!!!!\n");
+		}
+		else
+		{
+			//117cc
+			prints("\011CID 0xA0000 = 0x%x\n");
+			print_hex(*((volatile int*)0xA0000));
+			prints("\n");
+			prints("\011CID 0xA0004 = 0x%x\n");
+			print_hex(*((volatile int*)0xA0004));
+			prints("\n");
+			prints("\011CID 0xA0008 = 0x%x\n");
+			print_hex(*((volatile int*)0xA0008));
+			prints("\n");
+			prints("\011CID 0xA000C = 0x%x\n");
+			print_hex(*((volatile int*)0xA000C));
+			prints("\n");
+		}
+		//11b4c
+		*((volatile int*)0x9801040c) = 0;
+	}
+	//0x116e8
+	if (w19 == 51)
+	{
+		//0x11b20
+		func_11040(0x9801040c, 1, 0);
+
+		if (*((volatile int*)0x9801040c) & (1 << 0))
+		{
+			//0x11b6c
+			prints("DMA not finish!!!!!!!!!!!!!!!!!!\n");
+		}
+		else
+		{
+			//11b40
+			prints("DMA finished \n");
+		}
+		//11b4c
+		*((volatile int*)0x9801040c) = 0;
+	}
+
+	if ((Data_80006904 == 0) && (w19 == 6))
+	{
+		//0x11738
+		func_11040(0x9801040c, 1, 0);
+
+		if (*((volatile int*)0x9801040c) & (1 << 0))
+		{
+			//0x11890
+			prints("DMA not finish!!!!!!!!!!!!!!!!!!\n");
+			//->0x11764
+		}
+		else
+		{
+			//11758
+			prints("DMA finished \n");
+		}
+		//11764
+		*((volatile int*)0x9801040c) = 0;
+		//->0x1170c
+	}
+	//0x11704
+	if (w19 == 3)
+	{
+		//0x11ac8
+		int a/*Data_80006908*/ = (*((volatile char*)0x9801058a));
+		Data_80006908 = *((volatile char*)0x9801058b) | (/*Data_80006908*/a << 8);
+
+		prints("RCA = 0x");
+		print_hex(Data_80006908);
+		prints("\n");
+	}
+	//1170c
+	if (w19 == 12)
+	{
+		//11714
+		*((volatile char*)0x98010503) = 4;
+	}
+}
+
+
+static int rtk_sdmmc_set_ios(struct udevice *dev)
+{
+	printf("rtk_sdmmc_set_ios\n");
+
+	sdmmc_init();
+
+	func_113ac(MMC_CMD_GO_IDLE_STATE/*0*/, 0);
+
+#if 0
+	func_113ac(SD_CMD_SEND_IF_COND/*8*/, 0x1aa);
+
+	func_113ac(MMC_CMD_APP_CMD, 0);
+	Data_80006904 = 1;
+	func_113ac(SD_CMD_APP_SEND_OP_COND, 0x41200000);
+	Data_80006904 = 0;
+
+	{
+		int flag = 1;
+		int w20 = 0;
+		while ((*((volatile char*)0x9801058a) & (1 << 7)) == 0)
+		{
+			//11c18
+			func_113ac(MMC_CMD_APP_CMD, 0);
+			Data_80006904 = 1;
+			func_113ac(SD_CMD_APP_SEND_OP_COND, 0x41200000);
+			Data_80006904 = 0;
+
+			func_fe00(0, 1000);
+
+			if (w20++ > 50)
+			{
+				//->0x11cac
+				flag = 0;
+				break;
+			}
+		}
+		if (flag) //w20 == 50)
+		{
+			//0x11c5c
+			prints("card powerup status = 0x");
+			print_hex(*((volatile char*)0x9801058a));
+			prints("\n");
+
+			if (*((volatile char*)0x9801058a) & (1 << 6))
+			{
+				//->0x11e6c
+				Data_8000690c = 1;
+
+				prints("card capacity status = 0x");
+				print_hex(Data_8000690c);
+				prints("\n");
+			}
+			//0x11c8c
+			if (*((volatile char*)0x9801058a) & (1 << 0))
+			{
+				//->0x11e40
+				Data_80006904 = 1;
+
+				sync_75fc();
+
+				prints("can switch to 1.8V = 0x");
+				print_hex(Data_80006904);
+				prints("\n");
+				//->0x11ca0
+			}
+			else
+			{
+				//11c9c
+				Data_80006904 = 0;
+			}
+			//0x11ca0
+			func_fe00(0, 1000);
+		}
+	}
+	//TODO: Voltage switch
+
+	func_113ac(MMC_CMD_ALL_SEND_CID, 0);
+	func_113ac(SD_CMD_SEND_RELATIVE_ADDR, 0);
+	func_113ac(MMC_CMD_SELECT_CARD, Data_80006908 << 16);
+
+	prints("SD card has been initialized.\n");
+#endif
+
+	return 0;
+}
+
+
+static int rtk_sdmmc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
+			    struct mmc_data *data)
+{
+	printf("rtk_sdmmc_send_cmd\n");
+	return 0;
+}
+
+
+static int rtk_sdmmc_getcd(struct udevice *dev)
+{
+	char r0 = *((volatile char*)_REG_CARD_EXIST);
+
+	printf("rtk_sdmmc_getcd\n");
+
+	return (r0 & (1 << 2))? 1: 0;
+}
+
+
+static int rtk_sdmmc_probe(struct udevice *dev)
+{
+	struct rtk_sdmmc_plat *plat = dev_get_plat(dev);
+	struct rtk_sdmmc_host *host = dev_get_priv(dev);
+	struct mmc_config *cfg = &plat->cfg;
+	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
+
+	cfg->f_min = 400000;
+	cfg->f_max = 208000000;
+	cfg->voltages = MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_165_195;
+	cfg->b_max = CONFIG_SYS_MMC_MAX_BLK_COUNT;
+	cfg->host_caps = MMC_MODE_4BIT |
+						MMC_MODE_HS_52MHz |
+						MMC_MODE_HS |
+#ifdef CONFIG_SD30
+						MMC_CAP_UHS_SDR50 |
+						MMC_CAP_UHS_SDR104 |
+#endif
+						0/*MMC_MODE_HC*/;
+	cfg->name = dev->name;
+	upriv->mmc = &plat->mmc;
+
+	printf("rtk_sdmmc_probe\n");
+
+	return 0;
+}
+
+
+static int rtk_sdmmc_bind(struct udevice *dev)
+{
+	struct rtk_sdmmc_plat *plat = dev_get_plat(dev);
+
+	printf("rtk_sdmmc_bind\n");
+
+	return mmc_bind(dev, &plat->mmc, &plat->cfg);
+}
+
+#endif
+
 static const struct dm_mmc_ops rtk_sdmmc_ops = {
 	.send_cmd = rtk_sdmmc_send_cmd,
 	.set_ios = rtk_sdmmc_set_ios,
 	.get_cd = rtk_sdmmc_getcd,
+#if 0
 	.execute_tuning = rtk_sdmmc_execute_tuning_,
+#endif
 };
 
 static const struct udevice_id rtk_sdmmc_match[] = {

@@ -159,7 +159,7 @@
 
 #endif
 
-	#define CONFIG_SD30
+//	#define CONFIG_SD30
 
 #if 0
 
