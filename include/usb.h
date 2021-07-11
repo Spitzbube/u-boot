@@ -88,6 +88,17 @@ enum {
 	PACKET_SIZE_64  = 3,
 };
 
+struct controller {
+	int ctrl_type;
+	void *unsed; //Note we only use ctrl_type
+};
+
+enum {
+	CTRL_TYPE_UNKNOW = 0,
+	CTRL_TYPE_EHCI   = 1,
+	CTRL_TYPE_XHCI   = 2,
+};
+
 /**
  * struct usb_device - information about a USB device
  *
@@ -171,7 +182,12 @@ enum usb_init_type {
  */
 
 int usb_lowlevel_init(int index, enum usb_init_type init, void **controller);
+#ifdef CONFIG_USB_RTK
+int usb_lowlevel_stop_all(void);
+int usb_host_controller_init(void);
+#else
 int usb_lowlevel_stop(int index);
+#endif
 
 #if defined(CONFIG_USB_MUSB_HOST) || CONFIG_IS_ENABLED(DM_USB)
 int usb_reset_root_port(struct usb_device *dev);

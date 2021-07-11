@@ -194,13 +194,17 @@ void xhci_cleanup(struct xhci_ctrl *ctrl)
 static void *xhci_malloc(unsigned int size)
 {
 	void *ptr;
+#if 0 // add by cfyeh
 	size_t cacheline_size = max(XHCI_ALIGNMENT, CACHELINE_SIZE);
 
 	ptr = memalign(cacheline_size, ALIGN(size, cacheline_size));
+#else
+	ptr = memalign(0x400, ALIGN(size, 0x400));
+#endif // add by cfyeh
 	BUG_ON(!ptr);
 	memset(ptr, '\0', size);
 
-	xhci_flush_cache((uintptr_t)ptr, size);
+	xhci_flush_cache((uint32_t)(uintptr_t)ptr, size);
 
 	return ptr;
 }
@@ -518,6 +522,8 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
 	int i;
 	struct xhci_segment *seg;
 
+	printf("xhci_mem_init: 1\n");
+
 	/* DCBAA initialization */
 	ctrl->dcbaa = xhci_malloc(sizeof(struct xhci_device_context_array));
 	if (ctrl->dcbaa == NULL) {
@@ -525,9 +531,13 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
 		return -ENOMEM;
 	}
 
-	val_64 = xhci_virt_to_bus(ctrl, ctrl->dcbaa);
+	printf("xhci_mem_init: 2\n");
+
+	val_64 = (uintptr_t)ctrl->dcbaa;
 	/* Set the pointer in DCBAA register */
 	xhci_writeq(&hcor->or_dcbaap, val_64);
+
+	printf("xhci_mem_init: 3\n");
 
 	/* Command ring control pointer register initialization */
 	ctrl->cmd_ring = xhci_ring_alloc(ctrl, 1, true);
@@ -540,15 +550,21 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
 		ctrl->cmd_ring->cycle_state;
 	xhci_writeq(&hcor->or_crcr, val_64);
 
+	printf("xhci_mem_init: 4\n");
+
 	/* write the address of db register */
 	val = xhci_readl(&hccr->cr_dboff);
 	val &= DBOFF_MASK;
 	ctrl->dba = (struct xhci_doorbell_array *)((char *)hccr + val);
 
+	printf("xhci_mem_init: 5\n");
+
 	/* write the address of runtime register */
 	val = xhci_readl(&hccr->cr_rtsoff);
 	val &= RTSOFF_MASK;
 	ctrl->run_regs = (struct xhci_run_regs *)((char *)hccr + val);
+
+	printf("xhci_mem_init: 6\n");
 
 	/* writting the address of ir_set structure */
 	ctrl->ir_set = &ctrl->run_regs->ir_set[0];
@@ -570,6 +586,9 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
 		entry->rsvd = 0;
 		seg = seg->next;
 	}
+
+	printf("xhci_mem_init: 7\n");
+
 	xhci_flush_cache((uintptr_t)ctrl->erst.entries,
 			 ERST_NUM_SEGS * sizeof(struct xhci_erst_entry));
 
@@ -592,12 +611,16 @@ int xhci_mem_init(struct xhci_ctrl *ctrl, struct xhci_hccr *hccr,
 
 	xhci_writeq(&ctrl->ir_set->erst_base, val_64);
 
+	printf("xhci_mem_init: 8\n");
+
 	/* set up the scratchpad buffer array and scratchpad buffers */
 	xhci_scratchpad_alloc(ctrl);
 
 	/* initializing the virtual devices to NULL */
 	for (i = 0; i < MAX_HC_SLOTS; ++i)
 		ctrl->devs[i] = NULL;
+
+	printf("xhci_mem_init: 9\n");
 
 	/*
 	 * Just Zero'ing this register completely,

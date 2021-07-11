@@ -63,6 +63,9 @@ int usb_init(void)
 	int i, start_index = 0;
 	int controllers_initialized = 0;
 	int ret;
+#ifdef CONFIG_USB_RTK
+	int usb_max_controller_count = 0;
+#endif
 
 	dev_index = 0;
 	asynch_allowed = 1;
@@ -74,8 +77,16 @@ int usb_init(void)
 		usb_dev[i].devnum = -1;
 	}
 
+#ifdef CONFIG_USB_RTK
+	usb_max_controller_count = usb_host_controller_init();
+#endif
+
 	/* init low_level USB */
+#ifdef CONFIG_USB_RTK
+	for (i = 0; i < usb_max_controller_count; i++) {
+#else
 	for (i = 0; i < CONFIG_USB_MAX_CONTROLLER_COUNT; i++) {
+#endif
 		/* init low_level USB */
 		printf("USB%d:   ", i);
 		ret = usb_lowlevel_init(i, USB_INIT_HOST, &ctrl);
@@ -132,17 +143,24 @@ int usb_init(void)
  */
 int usb_stop(void)
 {
+#ifndef CONFIG_USB_RTK
 	int i;
+#endif
 
 	if (usb_started) {
 		asynch_allowed = 1;
 		usb_started = 0;
 		usb_hub_reset();
 
+#ifdef CONFIG_USB_RTK
+	if (usb_lowlevel_stop_all())
+		printf("failed to stop USB controller\n");
+#else
 		for (i = 0; i < CONFIG_USB_MAX_CONTROLLER_COUNT; i++) {
 			if (usb_lowlevel_stop(i))
 				printf("failed to stop USB controller %d\n", i);
 		}
+#endif
 	}
 
 	return 0;

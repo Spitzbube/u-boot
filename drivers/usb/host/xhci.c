@@ -1239,6 +1239,9 @@ static int xhci_lowlevel_init(struct xhci_ctrl *ctrl)
 
 	hccr = ctrl->hccr;
 	hcor = ctrl->hcor;
+
+	printf("xhci_lowlevel_init: 1\n");
+
 	/*
 	 * Program the Number of Device Slots Enabled field in the CONFIG
 	 * register with the max value of slots the HC can handle.
@@ -1248,12 +1251,20 @@ static int xhci_lowlevel_init(struct xhci_ctrl *ctrl)
 	val |= (val2 & ~HCS_SLOTS_MASK);
 	xhci_writel(&hcor->or_config, val);
 
+	printf("xhci_lowlevel_init: 2\n");
+
 	/* initializing xhci data structures */
 	if (xhci_mem_init(ctrl, hccr, hcor) < 0)
 		return -ENOMEM;
 
+	printf("xhci_lowlevel_init: 3\n");
+
 	reg = xhci_readl(&hccr->cr_hcsparams1);
+
+	printf("xhci_lowlevel_init: 4\n");
+
 	descriptor.hub.bNbrPorts = HCS_MAX_PORTS(reg);
+
 	printf("Register %x NbrPorts %d\n", reg, descriptor.hub.bNbrPorts);
 
 	/* Port Indicators */
@@ -1299,7 +1310,9 @@ static int xhci_lowlevel_stop(struct xhci_ctrl *ctrl)
 }
 
 #if !CONFIG_IS_ENABLED(DM_USB)
-int submit_control_msg(struct usb_device *udev, unsigned long pipe,
+
+//int submit_control_msg(struct usb_device *udev, unsigned long pipe,
+int xhci_submit_control_msg(struct usb_device *udev, unsigned long pipe,
 		       void *buffer, int length, struct devrequest *setup)
 {
 	struct usb_device *hop = udev;
@@ -1312,13 +1325,15 @@ int submit_control_msg(struct usb_device *udev, unsigned long pipe,
 					hop->portnr);
 }
 
-int submit_bulk_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
+//int submit_bulk_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
+int xhci_submit_bulk_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
 		    int length)
 {
 	return _xhci_submit_bulk_msg(udev, pipe, buffer, length);
 }
 
-int submit_int_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
+//int submit_int_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
+int xhci_submit_int_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
 		   int length, int interval, bool nonblock)
 {
 	return _xhci_submit_int_msg(udev, pipe, buffer, length, interval,
@@ -1332,7 +1347,8 @@ int submit_int_msg(struct usb_device *udev, unsigned long pipe, void *buffer,
  * @param index	index to the host controller data structure
  * @return pointer to the intialised controller
  */
-int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
+//int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
+int xhci_to_lowlevel_init(int index, enum usb_init_type init, void **controller)
 {
 	struct xhci_hccr *hccr;
 	struct xhci_hcor *hcor;
@@ -1347,6 +1363,8 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 	if (xhci_reset(hcor) != 0)
 		return -ENODEV;
 
+	printf("xhci_to_lowlevel_init: 1\n");
+
 	ctrl = &xhcic[index];
 
 	ctrl->hccr = hccr;
@@ -1354,12 +1372,16 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 
 	ret = xhci_lowlevel_init(ctrl);
 
+	printf("xhci_to_lowlevel_init: 2\n");
+
 	if (ret) {
 		ctrl->hccr = NULL;
 		ctrl->hcor = NULL;
 	} else {
 		*controller = &xhcic[index];
 	}
+
+	printf("xhci_to_lowlevel_init: 3\n");
 
 	return ret;
 }
@@ -1371,7 +1393,8 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
  * @param index	index to the host controller data structure
  * @return none
  */
-int usb_lowlevel_stop(int index)
+//int usb_lowlevel_stop(int index)
+int xhci_to_lowlevel_stop(int index)
 {
 	struct xhci_ctrl *ctrl = (xhcic + index);
 

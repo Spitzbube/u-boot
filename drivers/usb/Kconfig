@@ -129,6 +129,12 @@ endchoice
 
 endif
 
+config USB_RTK
+	bool "Realtek USB manager support"
+	---help---
+	  Say Y here if you use realtek SOC USB control EHCI/XHCI on your
+	  board.
+	  
 source "drivers/usb/gadget/Kconfig"
 
 source "drivers/usb/eth/Kconfig"

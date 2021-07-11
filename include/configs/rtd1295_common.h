@@ -289,7 +289,10 @@
 */
 #define CONFIG_DOS_PARTITION
 #define CONFIG_EFI_PARTITION
-#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 5
+
+#endif
+
+#define RTK_CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 5
 /*
 //#define CONFIG_DM_USB
 */
@@ -331,6 +334,8 @@
 /* Port 3, xhci u3 host only for 1296 */
 #define RTD1296_USB_PORT3_GPIO_TYPE "ISOGPIO"
 #define RTD1296_USB_PORT3_GPIO_NUM 32
+
+#if 0
 
 /* Fastboot */
 #define CONFIG_G_DNL_VENDOR_NUM      0x18d1

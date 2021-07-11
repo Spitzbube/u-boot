@@ -8,6 +8,8 @@ obj-y += usb-uclass.o
 obj-$(CONFIG_SANDBOX) += usb-sandbox.o
 endif
 
+obj-$(CONFIG_USB_RTK) += host-rtk.o
+
 # ohci
 obj-$(CONFIG_USB_OHCI_NEW) += ohci-hcd.o
 obj-$(CONFIG_USB_ATMEL) += ohci-at91.o
@@ -23,6 +25,7 @@ obj-$(CONFIG_USB_OHCI_GENERIC) += ohci-generic.o
 obj-$(CONFIG_USB_EHCI_HCD) += ehci-hcd.o
 obj-$(CONFIG_USB_EHCI_ARMADA100) += ehci-armada100.o utmi-armada100.o
 obj-$(CONFIG_USB_EHCI_ATMEL) += ehci-atmel.o
+obj-$(CONFIG_USB_EHCI_RTK) += ehci-rtk.o
 obj-$(CONFIG_USB_EHCI_FSL) += ehci-fsl.o
 obj-$(CONFIG_USB_EHCI_FARADAY) += ehci-faraday.o
 obj-$(CONFIG_USB_EHCI_GENERIC) += ehci-generic.o
@@ -57,6 +60,7 @@ obj-$(CONFIG_USB_XHCI_PCI) += xhci-pci.o
 obj-$(CONFIG_USB_XHCI_RCAR) += xhci-rcar.o
 obj-$(CONFIG_USB_XHCI_STI) += dwc3-sti-glue.o
 obj-$(CONFIG_USB_XHCI_OCTEON) += dwc3-octeon-glue.o
+obj-$(CONFIG_USB_XHCI_RTK) += xhci-plat.o
 
 # designware
 obj-$(CONFIG_USB_DWC2) += dwc2.o
